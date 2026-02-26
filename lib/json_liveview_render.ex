@@ -2,7 +2,7 @@ defmodule JsonLiveviewRender do
   @moduledoc """
   JsonLiveviewRender is a guardrailed generative UI toolkit for Phoenix LiveView.
 
-  Core v0.1 modules:
+  Core v0.2 modules:
 
   - `JsonLiveviewRender.Catalog` - catalog DSL for component contracts
   - `JsonLiveviewRender.Spec` - flat-spec validation

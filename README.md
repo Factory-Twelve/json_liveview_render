@@ -8,16 +8,17 @@ JsonLiveviewRender implements the **Catalog -> Spec -> Render** pattern:
 2. Have an LLM generate a flat JSON spec constrained to that catalog.
 3. Validate and render the spec server-side with LiveView.
 
-## v0.1 Scope
+## v0.2 Scope
 
 - Catalog DSL (`JsonLiveviewRender.Catalog`)
 - Spec validation (`JsonLiveviewRender.Spec`)
 - Registry mapping (`JsonLiveviewRender.Registry`)
 - LiveView renderer (`JsonLiveviewRender.Renderer`)
-- Permission filtering + binding resolution
+- Permission filtering + data binding (`*_binding`)
 - JSON Schema + prompt export (`JsonLiveviewRender.Schema`)
+- Local CI workflow (`./scripts/ci_local.sh`, `make ci-local`)
 
-Out of scope in v0.1:
+Out of scope in v0.2:
 
 - Provider streaming integrations/adapters
 - Expression runtime (`$state`, `$cond`)
@@ -34,7 +35,7 @@ Add `json_liveview_render` to your dependencies:
 ```elixir
 def deps do
   [
-    {:json_liveview_render, "~> 0.1.0"}
+    {:json_liveview_render, "~> 0.2.0"}
   ]
 end
 ```
@@ -90,6 +91,55 @@ case JsonLiveviewRender.Spec.validate(spec, MyApp.UICatalog) do
 end
 ```
 
+## Data Binding (v0.2)
+
+Props ending with `_binding` are resolved from the `bindings` assign at render time.
+
+Example spec fragment:
+
+```json
+{
+  "type": "data_table",
+  "props": {
+    "columns": [{"key": "id", "label": "Invoice #"}],
+    "rows_binding": "overdue_invoices"
+  }
+}
+```
+
+At render time, `rows_binding: "overdue_invoices"` resolves to `bindings["overdue_invoices"]` and the component receives `rows: [...]`.
+
+Enable optional runtime type checks for resolved binding values:
+
+```elixir
+<JsonLiveviewRender.Renderer.render
+  spec={@spec}
+  catalog={MyApp.UICatalog}
+  registry={MyApp.UIRegistry}
+  bindings={@bindings}
+  current_user={@current_user}
+  authorizer={MyApp.JsonLiveviewRender.Authorizer}
+  check_binding_types={true}
+/>
+```
+
+PubSub re-render pattern (documented; app-owned):
+
+```elixir
+def mount(_params, _session, socket) do
+  Phoenix.PubSub.subscribe(MyApp.PubSub, "invoices:overdue")
+
+  {:ok,
+   assign(socket, :bindings, %{
+     overdue_invoices: load_overdue_invoices()
+   })}
+end
+
+def handle_info({:overdue_invoices_updated, rows}, socket) do
+  {:noreply, update(socket, :bindings, &Map.put(&1, :overdue_invoices, rows))}
+end
+```
+
 ## Compatibility
 
 - Elixir >= 1.15
@@ -98,7 +148,7 @@ end
 
 ## Development Checks
 
-Run the v0.1 verification gate:
+Run the v0.2 verification gate:
 
 ```elixir
 mix ci

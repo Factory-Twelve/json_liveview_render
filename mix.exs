@@ -4,11 +4,11 @@ defmodule JsonLiveviewRender.MixProject do
   def project do
     [
       app: :json_liveview_render,
-      version: "0.1.0",
+      version: "0.2.0",
       elixir: "~> 1.15",
       description: description(),
-      source_url: "https://github.com/jfedor/json_liveview_render",
-      homepage_url: "https://github.com/jfedor/json_liveview_render",
+      source_url: "https://github.com/Factory-Twelve/json_liveview_render",
+      homepage_url: "https://github.com/Factory-Twelve/json_liveview_render",
       package: package(),
       docs: docs(),
       aliases: aliases(),
@@ -49,7 +49,7 @@ defmodule JsonLiveviewRender.MixProject do
       licenses: ["MIT"],
       files: ~w(lib .formatter.exs mix.exs README.md CHANGELOG.md LEARNINGS.md LICENSE),
       links: %{
-        "GitHub" => "https://github.com/jfedor/json_liveview_render"
+        "GitHub" => "https://github.com/Factory-Twelve/json_liveview_render"
       }
     ]
   end
