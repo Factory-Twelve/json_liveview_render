@@ -106,6 +106,35 @@ mix ci
 
 This runs formatting, compile with warnings-as-errors, and tests (including scaffold smoke coverage).
 
+Run the same gate locally (without GitHub Actions):
+
+```bash
+./scripts/ci_local.sh
+```
+
+Or via make:
+
+```bash
+make ci-local
+```
+
+To mirror the CI version matrix locally, run the same command under both toolchains:
+
+- Elixir `1.15.8` / OTP `26.2`
+- Elixir `1.19.5` / OTP `28.0`
+
+For `asdf`, that is typically:
+
+```bash
+asdf shell erlang 26.2
+asdf shell elixir 1.15.8-otp-26
+./scripts/ci_local.sh
+
+asdf shell erlang 28.0
+asdf shell elixir 1.19.5-otp-28
+./scripts/ci_local.sh
+```
+
 ## Learnings
 
 - See [LEARNINGS.md](./LEARNINGS.md) for implementation learnings and follow-up risks.
