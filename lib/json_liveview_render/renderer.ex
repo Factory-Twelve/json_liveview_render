@@ -97,7 +97,7 @@ defmodule JsonLiveviewRender.Renderer do
     Application.get_env(:json_liveview_render, :dev_tools_enabled, @default_dev_tools_enabled)
   end
 
-  defp dev_tools_configuration_enabled?(value), do: !!value
+  defp dev_tools_configuration_enabled?(value), do: value == true
 
   defp render_element(id, spec, catalog, registry, bindings, check_binding_types) do
     element = get_in(spec, ["elements", id])

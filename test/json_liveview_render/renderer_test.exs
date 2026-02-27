@@ -254,6 +254,43 @@ defmodule JsonLiveviewRender.RendererTest do
     JsonLiveviewRender.Test.assert_no_dev_tools_output(html)
   end
 
+  test "does not render dev tools when application config is a non-boolean string" do
+    spec = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    original = Application.get_env(:json_liveview_render, :dev_tools_enabled, :unset)
+
+    try do
+      Application.put_env(:json_liveview_render, :dev_tools_enabled, "false")
+
+      html =
+        JsonLiveviewRender.Test.render_spec(spec, Catalog,
+          registry: Registry,
+          current_user: %{role: :member},
+          authorizer: Authorizer,
+          bindings: %{},
+          dev_tools: true,
+          dev_tools_open: true
+        )
+
+      JsonLiveviewRender.Test.assert_no_dev_tools_output(html)
+    after
+      if original == :unset do
+        Application.delete_env(:json_liveview_render, :dev_tools_enabled)
+      else
+        Application.put_env(:json_liveview_render, :dev_tools_enabled, original)
+      end
+    end
+  end
+
   test "force-disables dev tools even when enabled by config" do
     spec = %{
       "root" => "metric_1",
