@@ -94,10 +94,15 @@ defmodule JsonLiveviewRender.Renderer do
   end
 
   defp dev_tools_configuration_enabled?(nil) do
-    Application.get_env(:json_liveview_render, :dev_tools_enabled, @default_dev_tools_enabled)
+    normalize_dev_tools_enabled(
+      Application.get_env(:json_liveview_render, :dev_tools_enabled, @default_dev_tools_enabled)
+    )
   end
 
-  defp dev_tools_configuration_enabled?(value), do: value == true
+  defp dev_tools_configuration_enabled?(value), do: normalize_dev_tools_enabled(value)
+
+  defp normalize_dev_tools_enabled(true), do: true
+  defp normalize_dev_tools_enabled(_), do: false
 
   defp render_element(id, spec, catalog, registry, bindings, check_binding_types) do
     element = get_in(spec, ["elements", id])
