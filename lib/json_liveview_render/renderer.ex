@@ -20,7 +20,6 @@ defmodule JsonLiveviewRender.Renderer do
   alias JsonLiveviewRender.Permissions
   alias JsonLiveviewRender.Registry
   alias JsonLiveviewRender.Spec
-  alias JsonLiveviewRender.DevTools
 
   attr(:spec, :map, required: true)
   attr(:catalog, :any, required: true)
@@ -67,7 +66,7 @@ defmodule JsonLiveviewRender.Renderer do
     <% end %>
 
     <%= if dev_tools_enabled?(@dev_tools) do %>
-      <DevTools.render
+      <JsonLiveviewRender.DevTools.render
         input_spec={@spec}
         render_spec={@_genui_spec}
         catalog={@catalog}
@@ -79,13 +78,19 @@ defmodule JsonLiveviewRender.Renderer do
     """
   end
 
-  defp spec_validator(true) when function_exported?(Spec, :validate_partial, 3),
-    do: &Spec.validate_partial/3
+  defp spec_validator(true) do
+    if function_exported?(Spec, :validate_partial, 3) do
+      &Spec.validate_partial/3
+    else
+      raise ArgumentError,
+            "allow_partial requires Spec.validate_partial/3, but that function is not available"
+    end
+  end
 
   defp spec_validator(_), do: &Spec.validate/3
 
   defp dev_tools_enabled?(enabled?) do
-    enabled? && function_exported?(DevTools, :render, 1)
+    enabled? && function_exported?(JsonLiveviewRender.DevTools, :render, 1)
   end
 
   defp render_element(id, spec, catalog, registry, bindings, check_binding_types) do

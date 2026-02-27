@@ -1,20 +1,17 @@
 defmodule JsonLiveviewRender.RendererAliasTest do
   use ExUnit.Case, async: true
 
-  test "renderer aliases and uses DevTools module in template" do
+  test "renderer renders the full DevTools module path in template" do
     source = File.read!(Path.expand("../../lib/json_liveview_render/renderer.ex", __DIR__))
 
-    assert String.contains?(source, "alias JsonLiveviewRender.DevTools")
-    assert String.contains?(source, "DevTools.render")
+    assert String.contains?(source, "JsonLiveviewRender.DevTools.render")
   end
 
-  test "renderer guards partial validation when allow_partial is enabled" do
+  test "renderer guards partial validation to avoid allow_partial without validate_partial" do
     source = File.read!(Path.expand("../../lib/json_liveview_render/renderer.ex", __DIR__))
 
-    assert Regex.match?(
-             ~r/assigns\.allow_partial\s+and\s+function_exported\?\(Spec,\s*:validate_partial,\s*3\)/,
-             source
-           )
+    assert String.contains?(source, "defp spec_validator(true) do")
+    assert String.contains?(source, "function_exported?(Spec, :validate_partial, 3)")
+    assert String.contains?(source, "raise ArgumentError")
   end
-
 end
