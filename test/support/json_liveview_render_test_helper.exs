@@ -46,18 +46,20 @@ defmodule JsonLiveviewRender.Test do
     )
   end
 
-  @spec render_spec_in_production_env(map(), module(), keyword()) :: String.t()
-  def render_spec_in_production_env(spec, catalog, opts \\ []) do
+  @spec render_spec_with_dev_tools_disabled(map(), module(), keyword()) :: String.t()
+  def render_spec_with_dev_tools_disabled(spec, catalog, opts \\ []) do
     render_spec(spec, catalog, Keyword.put_new(opts, :dev_tools_enabled, false))
   end
 
   @spec assert_no_dev_tools_output(String.t()) :: :ok
   def assert_no_dev_tools_output(html) do
-    refute String.contains?(html, "data-json-liveview-render-devtools")
-    refute String.contains?(html, "Input Spec")
-    refute String.contains?(html, "Rendered Spec")
-    refute String.contains?(html, "Input Errors")
-    refute String.contains?(html, "Rendered Errors")
+    for marker <-
+          ~w(data-json-liveview-render-devtools) ++
+            ["Input Spec", "Rendered Spec", "Input Errors", "Rendered Errors"] do
+      refute String.contains?(html, marker),
+             "expected no dev tools output, but found #{inspect(marker)} in rendered HTML"
+    end
+
     :ok
   end
 end
