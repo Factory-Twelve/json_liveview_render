@@ -17,7 +17,6 @@ defmodule JsonLiveviewRender.Renderer do
   use Phoenix.Component
 
   alias JsonLiveviewRender.Bindings
-  alias JsonLiveviewRender.DevTools
   alias JsonLiveviewRender.Permissions
   alias JsonLiveviewRender.Registry
   alias JsonLiveviewRender.Spec
@@ -30,10 +29,15 @@ defmodule JsonLiveviewRender.Renderer do
   attr(:authorizer, :any, default: JsonLiveviewRender.Authorizer.AllowAll)
   attr(:strict, :boolean, default: true)
   attr(:check_binding_types, :boolean, default: false)
+  attr(:allow_partial, :boolean, default: false)
+  attr(:dev_tools, :boolean, default: false)
+  attr(:dev_tools_open, :boolean, default: false)
 
   def render(assigns) do
+    validator = if assigns.allow_partial, do: &Spec.validate_partial/3, else: &Spec.validate/3
+
     validated_spec =
-      case Spec.validate(assigns.spec, assigns.catalog, strict: assigns.strict) do
+      case validator.(assigns.spec, assigns.catalog, strict: assigns.strict) do
         {:ok, spec} ->
           spec
 
@@ -59,6 +63,17 @@ defmodule JsonLiveviewRender.Renderer do
     ~H"""
     <%= if @_genui_root && Map.has_key?(@_genui_spec["elements"], @_genui_root) do %>
       <%= render_element(@_genui_root, @_genui_spec, @catalog, @registry, @bindings, @check_binding_types) %>
+    <% end %>
+
+    <%= if @dev_tools do %>
+      <DevTools.render
+        input_spec={@spec}
+        render_spec={@_genui_spec}
+        catalog={@catalog}
+        strict={@strict}
+        allow_partial={@allow_partial}
+        open={@dev_tools_open}
+      />
     <% end %>
     """
   end
