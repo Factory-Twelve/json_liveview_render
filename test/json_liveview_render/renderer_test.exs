@@ -268,7 +268,7 @@ defmodule JsonLiveviewRender.RendererTest do
 
     original = Application.get_env(:json_liveview_render, :dev_tools_enabled, :unset)
 
-    Enum.each(["false", :false], fn value ->
+    Enum.each(["false", false], fn value ->
       try do
         Application.put_env(:json_liveview_render, :dev_tools_enabled, value)
 
