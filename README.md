@@ -217,6 +217,7 @@ Enable in-browser spec inspection while developing LiveViews:
   bindings={@bindings}
   current_user={@current_user}
   dev_tools={true}
+  dev_tools_enabled={Application.get_env(:json_liveview_render, :dev_tools_enabled, false)}
   dev_tools_open={true}
 />
 ```
@@ -227,7 +228,40 @@ This renders a `<details>` inspector with:
 - rendered (permission-filtered) spec JSON
 - validation status and errors for each view
 
-Do not enable in production by default. Pair usage with an explicit runtime guard.
+Security by default:
+
+- `dev_tools` is only rendered when:
+  - `dev_tools` is `true`
+  - `dev_tools_enabled` resolves to `true`
+  - `dev_tools_force_disable` is `false`
+  - `JsonLiveviewRender.DevTools` is present (for dev-only builds)
+
+Recommended pattern:
+
+```elixir
+config :json_liveview_render, :dev_tools_enabled, Mix.env() == :dev
+
+# Staging/QA debug opt-in:
+config :json_liveview_render, :dev_tools_enabled, true
+```
+
+Then pass a single boolean guard from your app config:
+
+```elixir
+<JsonLiveviewRender.Renderer.render
+  spec={@spec}
+  catalog={MyApp.UICatalog}
+  registry={MyApp.UIRegistry}
+  bindings={@bindings}
+  current_user={@current_user}
+  dev_tools={@show_dev_tools}
+  dev_tools_enabled={Application.get_env(:json_liveview_render, :dev_tools_enabled)}
+  dev_tools_force_disable={Application.get_env(:json_liveview_render, :dev_tools_force_disable, false)}
+/>
+```
+
+Set `@show_dev_tools` from your own environment switch if needed, and keep
+`dev_tools_force_disable={true}` for extra hardening in sensitive pages.
 
 ## Compatibility
 

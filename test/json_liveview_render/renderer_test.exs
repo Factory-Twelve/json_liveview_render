@@ -220,12 +220,104 @@ defmodule JsonLiveviewRender.RendererTest do
         authorizer: Authorizer,
         bindings: %{},
         dev_tools: true,
-        dev_tools_open: true
+        dev_tools_open: true,
+        dev_tools_enabled: true
       )
 
     assert html =~ "data-json-liveview-render-devtools"
     assert html =~ "Input Spec"
     assert html =~ "Rendered Spec"
+  end
+
+  test "does not render dev tools in production-like guard mode" do
+    spec = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec_in_production_env(spec, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{},
+        dev_tools: true,
+        dev_tools_open: true
+      )
+
+    JsonLiveviewRender.Test.assert_no_dev_tools_output(html)
+  end
+
+  test "does not render dev tools when application config is a non-boolean value" do
+    spec = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    original = Application.get_env(:json_liveview_render, :dev_tools_enabled, :unset)
+
+    Enum.each(["false", false], fn value ->
+      try do
+        Application.put_env(:json_liveview_render, :dev_tools_enabled, value)
+
+        html =
+          JsonLiveviewRender.Test.render_spec(spec, Catalog,
+            registry: Registry,
+            current_user: %{role: :member},
+            authorizer: Authorizer,
+            bindings: %{},
+            dev_tools: true,
+            dev_tools_open: true
+          )
+
+        JsonLiveviewRender.Test.assert_no_dev_tools_output(html)
+      after
+        if original == :unset do
+          Application.delete_env(:json_liveview_render, :dev_tools_enabled)
+        else
+          Application.put_env(:json_liveview_render, :dev_tools_enabled, original)
+        end
+      end
+    end)
+  end
+
+  test "force-disables dev tools even when enabled by config" do
+    spec = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{},
+        dev_tools: true,
+        dev_tools_enabled: true,
+        dev_tools_force_disable: true,
+        dev_tools_open: true
+      )
+
+    JsonLiveviewRender.Test.assert_no_dev_tools_output(html)
   end
 
   test "renderer module does not keep an unused DevTools alias" do

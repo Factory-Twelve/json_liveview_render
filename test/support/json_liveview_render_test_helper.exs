@@ -26,6 +26,8 @@ defmodule JsonLiveviewRender.Test do
     allow_partial = Keyword.get(opts, :allow_partial, false)
     dev_tools = Keyword.get(opts, :dev_tools, false)
     dev_tools_open = Keyword.get(opts, :dev_tools_open, false)
+    dev_tools_enabled = Keyword.get(opts, :dev_tools_enabled, nil)
+    dev_tools_force_disable = Keyword.get(opts, :dev_tools_force_disable, false)
 
     Phoenix.LiveViewTest.render_component(&JsonLiveviewRender.Renderer.render/1,
       spec: spec,
@@ -38,7 +40,24 @@ defmodule JsonLiveviewRender.Test do
       check_binding_types: check_binding_types,
       allow_partial: allow_partial,
       dev_tools: dev_tools,
-      dev_tools_open: dev_tools_open
+      dev_tools_open: dev_tools_open,
+      dev_tools_enabled: dev_tools_enabled,
+      dev_tools_force_disable: dev_tools_force_disable
     )
+  end
+
+  @spec render_spec_in_production_env(map(), module(), keyword()) :: String.t()
+  def render_spec_in_production_env(spec, catalog, opts \\ []) do
+    render_spec(spec, catalog, Keyword.put_new(opts, :dev_tools_enabled, false))
+  end
+
+  @spec assert_no_dev_tools_output(String.t()) :: :ok
+  def assert_no_dev_tools_output(html) do
+    refute String.contains?(html, "data-json-liveview-render-devtools")
+    refute String.contains?(html, "Input Spec")
+    refute String.contains?(html, "Rendered Spec")
+    refute String.contains?(html, "Input Errors")
+    refute String.contains?(html, "Rendered Errors")
+    :ok
   end
 end
