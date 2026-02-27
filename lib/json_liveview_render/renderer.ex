@@ -21,6 +21,8 @@ defmodule JsonLiveviewRender.Renderer do
   alias JsonLiveviewRender.Registry
   alias JsonLiveviewRender.Spec
 
+  @default_dev_tools_enabled Mix.env() == :dev
+
   attr(:spec, :map, required: true)
   attr(:catalog, :any, required: true)
   attr(:registry, :any, required: true)
@@ -32,6 +34,8 @@ defmodule JsonLiveviewRender.Renderer do
   attr(:allow_partial, :boolean, default: false)
   attr(:dev_tools, :boolean, default: false)
   attr(:dev_tools_open, :boolean, default: false)
+  attr(:dev_tools_enabled, :any, default: nil)
+  attr(:dev_tools_force_disable, :boolean, default: false)
 
   def render(assigns) do
     validator = spec_validator(assigns.allow_partial)
@@ -65,7 +69,7 @@ defmodule JsonLiveviewRender.Renderer do
       <%= render_element(@_genui_root, @_genui_spec, @catalog, @registry, @bindings, @check_binding_types) %>
     <% end %>
 
-    <%= if dev_tools_enabled?(@dev_tools) do %>
+    <%= if dev_tools_enabled?(@dev_tools, @dev_tools_enabled, @dev_tools_force_disable) do %>
       <JsonLiveviewRender.DevTools.render
         input_spec={@spec}
         render_spec={@_genui_spec}
@@ -81,11 +85,19 @@ defmodule JsonLiveviewRender.Renderer do
   defp spec_validator(true), do: &Spec.validate_partial/3
   defp spec_validator(_), do: &Spec.validate/3
 
-  defp dev_tools_enabled?(enabled?) do
-    enabled? &&
+  defp dev_tools_enabled?(requested?, config_enabled?, force_disable?) do
+    requested? &&
+      !force_disable? &&
+      dev_tools_configuration_enabled?(config_enabled?) &&
       Code.ensure_loaded?(JsonLiveviewRender.DevTools) &&
       function_exported?(JsonLiveviewRender.DevTools, :render, 1)
   end
+
+  defp dev_tools_configuration_enabled?(nil) do
+    Application.get_env(:json_liveview_render, :dev_tools_enabled, @default_dev_tools_enabled)
+  end
+
+  defp dev_tools_configuration_enabled?(value), do: !!value
 
   defp render_element(id, spec, catalog, registry, bindings, check_binding_types) do
     element = get_in(spec, ["elements", id])

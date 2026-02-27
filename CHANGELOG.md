@@ -29,6 +29,10 @@
 - Added experimental DevTools integration:
   - `JsonLiveviewRender.DevTools` browser inspector component
   - renderer flags `dev_tools` and `dev_tools_open`
+- Hardened DevTools output by default:
+  - `JsonLiveviewRender.Renderer` now gates DevTools output behind environment/config checks
+  - added hard kill switch `dev_tools_force_disable` for sensitive environments
+  - added test coverage for absent DevTools rendering when disabled
 
 ## 0.2.0 - 2026-02-26
 

@@ -16,6 +16,7 @@ Updated: 2026-02-25
 - Binding transform logic must account for renamed keys (`rows_binding` -> `rows`) when building component assigns.
 - `Phoenix.LiveViewTest.render_component/2` is a macro in current LiveView versions, so helpers must `require Phoenix.LiveViewTest`.
 - In Elixir 1.19, support files in `test/support` should use `_helper.exs` naming to avoid test loader warnings.
+- DevTools output contains internal spec/error details, so production-safe defaults must be explicit (disabled by default) with an explicit environment or deployment opt-in.
 
 ## Testing Learnings
 
