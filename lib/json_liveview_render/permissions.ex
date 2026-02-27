@@ -57,10 +57,21 @@ defmodule JsonLiveviewRender.Permissions do
   defp allowed_element?(_element, _catalog, _current_user, _authorizer), do: false
 
   defp allowed?(authorizer, current_user, required_role) when is_atom(authorizer) do
-    authorizer.allowed?(current_user, required_role)
+    authorizer
+    |> apply(:allowed?, [current_user, required_role])
+    |> normalize_authorizer_result!(authorizer)
   end
 
   defp allowed?(authorizer, current_user, required_role) when is_function(authorizer, 2) do
-    authorizer.(current_user, required_role)
+    authorizer
+    |> Kernel.apply([current_user, required_role])
+    |> normalize_authorizer_result!(authorizer)
+  end
+
+  defp normalize_authorizer_result!(result, _authorizer) when is_boolean(result), do: result
+
+  defp normalize_authorizer_result!(result, authorizer) do
+    raise ArgumentError,
+          "authorizer #{inspect(authorizer)} must return boolean from allowed?/2, got: #{inspect(result)}"
   end
 end

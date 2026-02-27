@@ -23,6 +23,9 @@ defmodule JsonLiveviewRender.Test do
     bindings = Keyword.get(opts, :bindings, %{})
     strict = Keyword.get(opts, :strict, true)
     check_binding_types = Keyword.get(opts, :check_binding_types, false)
+    allow_partial = Keyword.get(opts, :allow_partial, false)
+    dev_tools = Keyword.get(opts, :dev_tools, false)
+    dev_tools_open = Keyword.get(opts, :dev_tools_open, false)
 
     Phoenix.LiveViewTest.render_component(&JsonLiveviewRender.Renderer.render/1,
       spec: spec,
@@ -32,7 +35,10 @@ defmodule JsonLiveviewRender.Test do
       authorizer: authorizer,
       bindings: bindings,
       strict: strict,
-      check_binding_types: check_binding_types
+      check_binding_types: check_binding_types,
+      allow_partial: allow_partial,
+      dev_tools: dev_tools,
+      dev_tools_open: dev_tools_open
     )
   end
 end
