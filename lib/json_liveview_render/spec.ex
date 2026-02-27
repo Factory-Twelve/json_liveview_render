@@ -1,5 +1,13 @@
 defmodule JsonLiveviewRender.Spec do
-  @moduledoc "Validates JsonLiveviewRender flat specs against a catalog contract."
+  @moduledoc """
+  v0.2 stable validation contract for flat `root + elements` specs.
+
+  Validates:
+  - spec shape and root reference
+  - child reference resolution
+  - cycle freedom
+  - component existence and prop contracts
+  """
 
   require Logger
 
@@ -12,13 +20,31 @@ defmodule JsonLiveviewRender.Spec do
   @spec validate(map() | String.t(), module()) :: validation_result()
   def validate(spec, catalog), do: validate(spec, catalog, strict: true)
 
+  @doc """
+  Validates a partial spec for progressive streaming/rendering scenarios.
+
+  Unlike `validate/3`, partial validation allows:
+  - missing `root`
+  - unresolved child references (elements that have not arrived yet)
+  """
+  @spec validate_partial(map() | String.t(), module(), keyword()) :: validation_result()
+  def validate_partial(spec, catalog, opts \\ []) when is_list(opts) do
+    opts =
+      [allow_missing_root: true, allow_unresolved_children: true]
+      |> Keyword.merge(opts)
+
+    validate(spec, catalog, opts)
+  end
+
   @spec validate(map() | String.t(), module(), keyword()) :: validation_result()
   def validate(spec, catalog, opts) when is_list(opts) do
     strict? = Keyword.get(opts, :strict, true)
+    allow_missing_root? = Keyword.get(opts, :allow_missing_root, false)
+    allow_unresolved_children? = Keyword.get(opts, :allow_unresolved_children, false)
 
     with {:ok, spec_map} <- parse_spec(spec),
-         {:ok, root, elements} <- validate_structure(spec_map),
-         [] <- validate_references(elements),
+         {:ok, root, elements} <- validate_structure(spec_map, allow_missing_root?),
+         [] <- validate_references(elements, allow_unresolved_children?),
          [] <- detect_cycles(root, elements),
          [] <- validate_elements(elements, catalog, strict?) do
       {:ok, %{"root" => root, "elements" => elements}}
@@ -95,19 +121,29 @@ defmodule JsonLiveviewRender.Spec do
   defp normalize_children(children) when is_list(children), do: Enum.map(children, &to_string/1)
   defp normalize_children(_), do: []
 
-  defp validate_structure(spec) do
+  defp validate_structure(spec, allow_missing_root?) do
     root = spec["root"]
     elements = spec["elements"]
 
     cond do
+      not is_map(elements) ->
+        {:error, [Errors.elements_missing()]}
+
+      is_nil(root) and allow_missing_root? ->
+        {:ok, nil, elements}
+
       is_nil(root) ->
         {:error, [Errors.root_missing()]}
 
       not is_binary(root) ->
         {:error, [{:invalid_root_type, "root must be a string"}]}
 
-      not is_map(elements) ->
-        {:error, [Errors.elements_missing()]}
+      allow_missing_root? and not Map.has_key?(elements, root) ->
+        Logger.warning(
+          "[JsonLiveviewRender.Spec] partial validation: root #{inspect(root)} not yet present in elements"
+        )
+
+        {:ok, root, elements}
 
       not Map.has_key?(elements, root) ->
         {:error, [Errors.root_not_found(root)]}
@@ -117,7 +153,7 @@ defmodule JsonLiveviewRender.Spec do
     end
   end
 
-  defp validate_references(elements) do
+  defp validate_references(elements, allow_unresolved_children?) do
     Enum.flat_map(elements, fn {id, element} ->
       case element do
         %{} ->
@@ -129,7 +165,8 @@ defmodule JsonLiveviewRender.Spec do
 
             true ->
               Enum.reduce(children, [], fn child_id, acc ->
-                if is_binary(child_id) and Map.has_key?(elements, child_id) do
+                if is_binary(child_id) and
+                     (allow_unresolved_children? or Map.has_key?(elements, child_id)) do
                   acc
                 else
                   [Errors.unresolved_child(id, child_id) | acc]
@@ -143,6 +180,8 @@ defmodule JsonLiveviewRender.Spec do
       end
     end)
   end
+
+  defp detect_cycles(nil, _elements), do: []
 
   defp detect_cycles(root, elements) do
     {_visited, cycles} = dfs(root, elements, MapSet.new(), [], [])

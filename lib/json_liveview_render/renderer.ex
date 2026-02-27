@@ -1,5 +1,18 @@
 defmodule JsonLiveviewRender.Renderer do
-  @moduledoc "LiveView function component that validates and renders JsonLiveviewRender specs."
+  @moduledoc """
+  Stable v0.2 core rendering component for JsonLiveviewRender specs.
+
+  API scope:
+
+  - Stability: v0.2 stable contract (included in the v0.3 lock)
+  - Required assigns:
+    `spec`, `catalog`, `registry`, `current_user`.
+  - v0.3-only extension: partial-render mode via `allow_partial`.
+
+  Optional assigns:
+  `bindings`, `authorizer`, `strict`, `check_binding_types`,
+  `allow_partial`, `dev_tools`, `dev_tools_open`.
+  """
 
   use Phoenix.Component
 
@@ -16,10 +29,15 @@ defmodule JsonLiveviewRender.Renderer do
   attr(:authorizer, :any, default: JsonLiveviewRender.Authorizer.AllowAll)
   attr(:strict, :boolean, default: true)
   attr(:check_binding_types, :boolean, default: false)
+  attr(:allow_partial, :boolean, default: false)
+  attr(:dev_tools, :boolean, default: false)
+  attr(:dev_tools_open, :boolean, default: false)
 
   def render(assigns) do
+    validator = spec_validator(assigns.allow_partial)
+
     validated_spec =
-      case Spec.validate(assigns.spec, assigns.catalog, strict: assigns.strict) do
+      case validator.(assigns.spec, assigns.catalog, strict: assigns.strict) do
         {:ok, spec} ->
           spec
 
@@ -46,7 +64,27 @@ defmodule JsonLiveviewRender.Renderer do
     <%= if @_genui_root && Map.has_key?(@_genui_spec["elements"], @_genui_root) do %>
       <%= render_element(@_genui_root, @_genui_spec, @catalog, @registry, @bindings, @check_binding_types) %>
     <% end %>
+
+    <%= if dev_tools_enabled?(@dev_tools) do %>
+      <JsonLiveviewRender.DevTools.render
+        input_spec={@spec}
+        render_spec={@_genui_spec}
+        catalog={@catalog}
+        strict={@strict}
+        allow_partial={@allow_partial}
+        open={@dev_tools_open}
+      />
+    <% end %>
     """
+  end
+
+  defp spec_validator(true), do: &Spec.validate_partial/3
+  defp spec_validator(_), do: &Spec.validate/3
+
+  defp dev_tools_enabled?(enabled?) do
+    enabled? &&
+      Code.ensure_loaded?(JsonLiveviewRender.DevTools) &&
+      function_exported?(JsonLiveviewRender.DevTools, :render, 1)
   end
 
   defp render_element(id, spec, catalog, registry, bindings, check_binding_types) do

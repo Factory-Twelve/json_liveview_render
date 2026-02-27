@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased (v0.3 scope lock)
+
+### API stability scope lock
+
+- Added explicit v0.3 package-level API scope in `README.md`:
+
+  - Stable v0.2 core (contract): Catalog, Spec, Registry, Renderer, Permissions, Bindings, Schema, Debug
+  - v0.3 candidate: Stream, partial validation/rendering (`validate_partial/3`, `allow_partial`)
+  - Experimental/deferred: Streaming adapters and DevTools
+
+- Marked streaming adapters and DevTools as experimental/companion-surface and out of the v0.3 core contract.
+
+### Changes
+
+- Added partial-spec validation path for streaming:
+  - `JsonLiveviewRender.Spec.validate_partial/3`
+  - `allow_missing_root` and `allow_unresolved_children` validation options
+- Added partial renderer mode:
+  - `JsonLiveviewRender.Renderer` now supports `allow_partial: true`
+- Expanded stream runtime APIs:
+  - `JsonLiveviewRender.Stream.ingest_many/3`
+  - `JsonLiveviewRender.Stream.finalize/3`
+- Added provider adapter examples (experimental reference only):
+  - `JsonLiveviewRender.Stream.Adapter.OpenAI`
+  - `JsonLiveviewRender.Stream.Adapter.Anthropic`
+- Added tests for partial rendering, stream finalize behavior, and adapter integration.
+- Added experimental DevTools integration:
+  - `JsonLiveviewRender.DevTools` browser inspector component
+  - renderer flags `dev_tools` and `dev_tools_open`
+
 ## 0.2.0 - 2026-02-26
 
 - Data binding milestone complete:
@@ -22,7 +52,7 @@
 - ExUnit + property tests and CI workflow.
 - Added module-level catalog introspection helpers (`types/1`, `props_for/2`, `exists?/2`).
 - Added compile-time registry drift warnings for unknown mapped component types.
-- Added structured event stream accumulator (`JsonLiveviewRender.Stream`) as pre-v0.3 functionality.
+- Added structured event stream accumulator (`JsonLiveviewRender.Stream`) as v0.3 candidate functionality.
 - Added `JsonLiveviewRender.Debug.inspect_spec/3` diagnostics report helper.
 - Added `mix json_liveview_render.new` starter scaffolding task.
 - Added `JsonLiveviewRender.Test.Generators` support helpers for property-based spec fixtures.

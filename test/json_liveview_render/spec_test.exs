@@ -33,6 +33,26 @@ defmodule JsonLiveviewRender.SpecTest do
     assert Enum.any?(reasons, fn {tag, _} -> tag == :unresolved_child end)
   end
 
+  test "validate_partial/3 allows unresolved child refs for streaming" do
+    spec = put_in(valid_spec(), ["elements", "page", "children"], ["missing_child"])
+
+    assert {:ok, validated} = Spec.validate_partial(spec, Catalog)
+    assert validated["root"] == "page"
+  end
+
+  test "validate_partial/3 allows missing root while elements stream in" do
+    spec = %{"elements" => %{}}
+    assert {:ok, %{"root" => nil, "elements" => %{}}} = Spec.validate_partial(spec, Catalog)
+  end
+
+  test "validate_partial/3 warns when root is set but root element is not present yet" do
+    spec = %{"root" => "page", "elements" => %{}}
+
+    assert capture_log(fn ->
+             assert {:ok, _} = Spec.validate_partial(spec, Catalog)
+           end) =~ "root \"page\" not yet present"
+  end
+
   test "rejects cycles" do
     spec =
       valid_spec()

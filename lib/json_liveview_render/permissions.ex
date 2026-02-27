@@ -1,5 +1,15 @@
 defmodule JsonLiveviewRender.Permissions do
-  @moduledoc "Filters elements based on catalog-defined permissions and current user role checks."
+  @moduledoc """
+  Permission filtering contract for `JsonLiveviewRender` specs.
+
+  API scope:
+
+  - Stability: v0.2 core contract
+  - Included in the v0.3 package scope lock
+
+  Delegates visibility decisions to an app-provided authorization function or callback
+  and removes unauthorized elements before invoking component rendering.
+  """
 
   alias JsonLiveviewRender.Catalog.ComponentDef
 
@@ -47,10 +57,21 @@ defmodule JsonLiveviewRender.Permissions do
   defp allowed_element?(_element, _catalog, _current_user, _authorizer), do: false
 
   defp allowed?(authorizer, current_user, required_role) when is_atom(authorizer) do
-    authorizer.allowed?(current_user, required_role)
+    authorizer
+    |> apply(:allowed?, [current_user, required_role])
+    |> normalize_authorizer_result!(authorizer)
   end
 
   defp allowed?(authorizer, current_user, required_role) when is_function(authorizer, 2) do
-    authorizer.(current_user, required_role)
+    authorizer
+    |> Kernel.apply([current_user, required_role])
+    |> normalize_authorizer_result!(authorizer)
+  end
+
+  defp normalize_authorizer_result!(result, _authorizer) when is_boolean(result), do: result
+
+  defp normalize_authorizer_result!(result, authorizer) do
+    raise ArgumentError,
+          "authorizer #{inspect(authorizer)} must return boolean from allowed?/2, got: #{inspect(result)}"
   end
 end
