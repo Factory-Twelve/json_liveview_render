@@ -1,5 +1,13 @@
 defmodule JsonLiveviewRender.Stream do
-  @moduledoc "Structured event stream accumulator for incremental spec assembly."
+  @moduledoc """
+  Structured event stream accumulator for incremental spec assembly.
+
+  API scope:
+
+  - Stability: v0.3 candidate (locked for this release cycle)
+  - In v0.2 contract: Not required
+  - Compatibility: Optional opt-in streaming surface for incremental rendering workflows
+  """
 
   alias JsonLiveviewRender.Spec
 

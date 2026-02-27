@@ -1,9 +1,23 @@
 defmodule JsonLiveviewRender.Renderer do
-  @moduledoc "LiveView function component that validates and renders JsonLiveviewRender specs."
+  @moduledoc """
+  Stable v0.2 core rendering component for JsonLiveviewRender specs.
+
+  API scope:
+
+  - Stability: v0.2 stable contract (included in the v0.3 lock)
+  - Required assigns:
+    `spec`, `catalog`, `registry`, `current_user`.
+  - v0.3-only extension: partial-render mode via `allow_partial`.
+
+  Optional assigns:
+  `bindings`, `authorizer`, `strict`, `check_binding_types`,
+  `allow_partial`, `dev_tools`, `dev_tools_open`.
+  """
 
   use Phoenix.Component
 
   alias JsonLiveviewRender.Bindings
+  alias JsonLiveviewRender.DevTools
   alias JsonLiveviewRender.Permissions
   alias JsonLiveviewRender.Registry
   alias JsonLiveviewRender.Spec

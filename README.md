@@ -8,25 +8,34 @@ JsonLiveviewRender implements the **Catalog -> Spec -> Render** pattern:
 2. Have an LLM generate a flat JSON spec constrained to that catalog.
 3. Validate and render the spec server-side with LiveView.
 
-## v0.2 Scope
+## API Stability (PRD Contract)
 
-- Catalog DSL (`JsonLiveviewRender.Catalog`)
-- Spec validation (`JsonLiveviewRender.Spec`)
-- Registry mapping (`JsonLiveviewRender.Registry`)
-- LiveView renderer (`JsonLiveviewRender.Renderer`)
-- Permission filtering + data binding (`*_binding`)
-- JSON Schema + prompt export (`JsonLiveviewRender.Schema`)
-- Local CI workflow (`./scripts/ci_local.sh`, `make ci-local`)
+JsonLiveviewRender tracks behavior by release family with an explicit v0.3 scope lock.
 
-Out of scope in v0.2:
+| Feature | v0.2 core (contract) | v0.3 candidate (locked) | Experimental / deferred |
+| ------- | -------------------- | ------------------------ | --------------------- |
+| Catalog (`JsonLiveviewRender.Catalog`) | ✅ In scope | | |
+| Spec validator (`JsonLiveviewRender.Spec`) | ✅ In scope | | |
+| Registry (`JsonLiveviewRender.Registry`) | ✅ In scope | | |
+| Renderer (`JsonLiveviewRender.Renderer`) | ✅ In scope | | |
+| Permissions (`JsonLiveviewRender.Permissions`) | ✅ In scope | | |
+| Schema (`JsonLiveviewRender.Schema`) | ✅ In scope | | |
+| Bindings (`JsonLiveviewRender.Bindings`) | ✅ In scope | | |
+| Debug (`JsonLiveviewRender.Debug`) | ✅ In scope | | |
+| Stream API (`JsonLiveviewRender.Stream`) | | ✅ In scope | |
+| Partial validation/rendering (`validate_partial`, `allow_partial`) | | ✅ In scope | |
+| Streaming adapters (`JsonLiveviewRender.Stream.Adapter.*`) | | | ✅ Deferred to companion package path |
+| DevTools (`JsonLiveviewRender.DevTools`) | | | ✅ Experimental |
+| Cross-platform / transport adapters (Slack/Teams/etc.) | | | ✅ Deferred |
 
-- Provider streaming integrations/adapters
+Out of scope in v0.x core:
+
 - Expression runtime (`$state`, `$cond`)
+- Streaming transport adapter normalize layer (provider-specific, companion package surface)
 - Cross-platform adapters (Slack/Teams/WhatsApp)
+- `json_liveview_render` dev-only introspection in production
 
-Experimental now (pre-v0.3):
-
-- Structured stream accumulator (`JsonLiveviewRender.Stream`) with `{:root, id}`, `{:element, id, element}`, `{:finalize}` events
+Feature matrix details are mirrored in `CHANGELOG.md`.
 
 ## Installation
 
@@ -35,7 +44,7 @@ Add `json_liveview_render` to your dependencies:
 ```elixir
 def deps do
   [
-    {:json_liveview_render, "~> 0.2.0"}
+    {:json_liveview_render, "~> 0.2"}
   ]
 end
 ```
@@ -91,7 +100,7 @@ case JsonLiveviewRender.Spec.validate(spec, MyApp.UICatalog) do
 end
 ```
 
-## Data Binding (v0.2)
+## Data Binding (v0.2 Core)
 
 Props ending with `_binding` are resolved from the `bindings` assign at render time.
 
@@ -140,6 +149,86 @@ def handle_info({:overdue_invoices_updated, rows}, socket) do
 end
 ```
 
+## Streaming (v0.3 candidate)
+
+For incremental rendering, enable partial spec handling in the renderer while elements stream in:
+
+```elixir
+<JsonLiveviewRender.Renderer.render
+  spec={@spec}
+  catalog={MyApp.UICatalog}
+  registry={MyApp.UIRegistry}
+  bindings={@bindings}
+  current_user={@current_user}
+  allow_partial={true}
+/>
+```
+
+Build specs progressively:
+
+```elixir
+stream = JsonLiveviewRender.Stream.new()
+
+{:ok, stream} = JsonLiveviewRender.Stream.ingest(stream, {:root, "page"}, MyApp.UICatalog)
+{:ok, stream} = JsonLiveviewRender.Stream.ingest(stream, {:element, "page", page_el}, MyApp.UICatalog)
+{:ok, stream} = JsonLiveviewRender.Stream.ingest(stream, {:element, "metric_1", metric_el}, MyApp.UICatalog)
+{:ok, stream} = JsonLiveviewRender.Stream.ingest(stream, {:finalize}, MyApp.UICatalog)
+
+spec = JsonLiveviewRender.Stream.to_spec(stream)
+{:ok, _validated_spec} = JsonLiveviewRender.Stream.finalize(stream, MyApp.UICatalog)
+```
+
+Provider adapter examples convert provider payloads into structured stream events:
+
+```elixir
+case JsonLiveviewRender.Stream.Adapter.OpenAI.normalize_event(provider_payload) do
+  {:ok, event} ->
+    JsonLiveviewRender.Stream.ingest(stream, event, MyApp.UICatalog)
+
+  :ignore ->
+    {:ok, stream}
+
+  {:error, reason} ->
+    {:error, reason}
+end
+```
+
+## Experimental adapters and companion package features
+
+The following adapter modules are shipped for experimentation and reference only:
+
+- `JsonLiveviewRender.Stream.Adapter`
+- `JsonLiveviewRender.Stream.Adapter.OpenAI`
+- `JsonLiveviewRender.Stream.Adapter.Anthropic`
+
+Streaming transport normalization is deferred to companion-package implementations for production integrations.
+
+Use these modules only as reference patterns for provider-specific adapters.
+
+## DevTools (Experimental)
+
+Enable in-browser spec inspection while developing LiveViews:
+
+```elixir
+<JsonLiveviewRender.Renderer.render
+  spec={@spec}
+  catalog={MyApp.UICatalog}
+  registry={MyApp.UIRegistry}
+  bindings={@bindings}
+  current_user={@current_user}
+  dev_tools={true}
+  dev_tools_open={true}
+/>
+```
+
+This renders a `<details>` inspector with:
+
+- input spec JSON
+- rendered (permission-filtered) spec JSON
+- validation status and errors for each view
+
+Do not enable in production by default. Pair usage with an explicit runtime guard.
+
 ## Compatibility
 
 - Elixir >= 1.15
@@ -148,7 +237,7 @@ end
 
 ## Development Checks
 
-Run the v0.2 verification gate:
+Run the verification gate for this branch:
 
 ```elixir
 mix ci
