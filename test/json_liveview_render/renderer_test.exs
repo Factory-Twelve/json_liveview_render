@@ -6,6 +6,17 @@ defmodule JsonLiveviewRender.RendererTest do
   alias JsonLiveviewRenderTest.Fixtures.Catalog
   alias JsonLiveviewRenderTest.Fixtures.Registry
 
+  @dev_tools_spec %{
+    "root" => "metric_1",
+    "elements" => %{
+      "metric_1" => %{
+        "type" => "metric",
+        "props" => %{"label" => "Revenue", "value" => "$100"},
+        "children" => []
+      }
+    }
+  }
+
   test "renders valid spec with binding resolution" do
     spec = %{
       "root" => "page",
@@ -202,19 +213,8 @@ defmodule JsonLiveviewRender.RendererTest do
   end
 
   test "renders dev tools inspector when enabled" do
-    spec = %{
-      "root" => "metric_1",
-      "elements" => %{
-        "metric_1" => %{
-          "type" => "metric",
-          "props" => %{"label" => "Revenue", "value" => "$100"},
-          "children" => []
-        }
-      }
-    }
-
     html =
-      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+      JsonLiveviewRender.Test.render_spec(@dev_tools_spec, Catalog,
         registry: Registry,
         current_user: %{role: :member},
         authorizer: Authorizer,
@@ -230,19 +230,8 @@ defmodule JsonLiveviewRender.RendererTest do
   end
 
   test "does not render dev tools in production-like guard mode" do
-    spec = %{
-      "root" => "metric_1",
-      "elements" => %{
-        "metric_1" => %{
-          "type" => "metric",
-          "props" => %{"label" => "Revenue", "value" => "$100"},
-          "children" => []
-        }
-      }
-    }
-
     html =
-      JsonLiveviewRender.Test.render_spec_in_production_env(spec, Catalog,
+      JsonLiveviewRender.Test.render_spec_with_dev_tools_disabled(@dev_tools_spec, Catalog,
         registry: Registry,
         current_user: %{role: :member},
         authorizer: Authorizer,
@@ -255,25 +244,14 @@ defmodule JsonLiveviewRender.RendererTest do
   end
 
   test "does not render dev tools when application config is a non-boolean value" do
-    spec = %{
-      "root" => "metric_1",
-      "elements" => %{
-        "metric_1" => %{
-          "type" => "metric",
-          "props" => %{"label" => "Revenue", "value" => "$100"},
-          "children" => []
-        }
-      }
-    }
-
     original = Application.get_env(:json_liveview_render, :dev_tools_enabled, :unset)
 
-    Enum.each(["false", false], fn value ->
+    Enum.each(["true", "false", 1, :enabled], fn value ->
       try do
         Application.put_env(:json_liveview_render, :dev_tools_enabled, value)
 
         html =
-          JsonLiveviewRender.Test.render_spec(spec, Catalog,
+          JsonLiveviewRender.Test.render_spec(@dev_tools_spec, Catalog,
             registry: Registry,
             current_user: %{role: :member},
             authorizer: Authorizer,
@@ -294,19 +272,8 @@ defmodule JsonLiveviewRender.RendererTest do
   end
 
   test "force-disables dev tools even when enabled by config" do
-    spec = %{
-      "root" => "metric_1",
-      "elements" => %{
-        "metric_1" => %{
-          "type" => "metric",
-          "props" => %{"label" => "Revenue", "value" => "$100"},
-          "children" => []
-        }
-      }
-    }
-
     html =
-      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+      JsonLiveviewRender.Test.render_spec(@dev_tools_spec, Catalog,
         registry: Registry,
         current_user: %{role: :member},
         authorizer: Authorizer,

@@ -11,7 +11,8 @@ defmodule JsonLiveviewRender.Renderer do
 
   Optional assigns:
   `bindings`, `authorizer`, `strict`, `check_binding_types`,
-  `allow_partial`, `dev_tools`, `dev_tools_open`.
+  `allow_partial`, `dev_tools`, `dev_tools_open`,
+  `dev_tools_enabled`, `dev_tools_force_disable`.
   """
 
   use Phoenix.Component
@@ -20,8 +21,6 @@ defmodule JsonLiveviewRender.Renderer do
   alias JsonLiveviewRender.Permissions
   alias JsonLiveviewRender.Registry
   alias JsonLiveviewRender.Spec
-
-  @default_dev_tools_enabled Mix.env() == :dev
 
   attr(:spec, :map, required: true)
   attr(:catalog, :any, required: true)
@@ -95,7 +94,7 @@ defmodule JsonLiveviewRender.Renderer do
 
   defp dev_tools_configuration_enabled?(nil) do
     normalize_dev_tools_enabled(
-      Application.get_env(:json_liveview_render, :dev_tools_enabled, @default_dev_tools_enabled)
+      Application.get_env(:json_liveview_render, :dev_tools_enabled, false)
     )
   end
 

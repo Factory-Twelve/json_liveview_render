@@ -236,13 +236,13 @@ Security by default:
   - `dev_tools_force_disable` is `false`
   - `JsonLiveviewRender.DevTools` is present (for dev-only builds)
 
-Recommended pattern:
+Recommended pattern (in compile-time config files like `config/dev.exs`):
 
 ```elixir
-config :json_liveview_render, :dev_tools_enabled, Mix.env() == :dev
-
-# Staging/QA debug opt-in:
+# config/dev.exs
 config :json_liveview_render, :dev_tools_enabled, true
+
+# config/prod.exs — not needed, false is the default
 ```
 
 Then pass a single boolean guard from your app config:
