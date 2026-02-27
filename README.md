@@ -217,7 +217,7 @@ Enable in-browser spec inspection while developing LiveViews:
   bindings={@bindings}
   current_user={@current_user}
   dev_tools={true}
-  dev_tools_enabled={Application.get_env(:json_liveview_render, :dev_tools_enabled, Mix.env() == :dev)}
+  dev_tools_enabled={Application.get_env(:json_liveview_render, :dev_tools_enabled, false)}
   dev_tools_open={true}
 />
 ```
