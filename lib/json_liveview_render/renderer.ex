@@ -20,6 +20,7 @@ defmodule JsonLiveviewRender.Renderer do
   alias JsonLiveviewRender.Permissions
   alias JsonLiveviewRender.Registry
   alias JsonLiveviewRender.Spec
+  alias JsonLiveviewRender.DevTools
 
   attr(:spec, :map, required: true)
   attr(:catalog, :any, required: true)
@@ -34,12 +35,7 @@ defmodule JsonLiveviewRender.Renderer do
   attr(:dev_tools_open, :boolean, default: false)
 
   def render(assigns) do
-    validator =
-      if assigns.allow_partial and function_exported?(Spec, :validate_partial, 3) do
-        &Spec.validate_partial/3
-      else
-        &Spec.validate/3
-      end
+    validator = spec_validator(assigns.allow_partial)
 
     validated_spec =
       case validator.(assigns.spec, assigns.catalog, strict: assigns.strict) do
@@ -70,8 +66,8 @@ defmodule JsonLiveviewRender.Renderer do
       <%= render_element(@_genui_root, @_genui_spec, @catalog, @registry, @bindings, @check_binding_types) %>
     <% end %>
 
-    <%= if @dev_tools do %>
-      <JsonLiveviewRender.DevTools.render
+    <%= if dev_tools_enabled?(@dev_tools) do %>
+      <DevTools.render
         input_spec={@spec}
         render_spec={@_genui_spec}
         catalog={@catalog}
@@ -81,6 +77,15 @@ defmodule JsonLiveviewRender.Renderer do
       />
     <% end %>
     """
+  end
+
+  defp spec_validator(true) when function_exported?(Spec, :validate_partial, 3),
+    do: &Spec.validate_partial/3
+
+  defp spec_validator(_), do: &Spec.validate/3
+
+  defp dev_tools_enabled?(enabled?) do
+    enabled? && function_exported?(DevTools, :render, 1)
   end
 
   defp render_element(id, spec, catalog, registry, bindings, check_binding_types) do
