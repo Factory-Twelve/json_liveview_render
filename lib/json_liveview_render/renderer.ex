@@ -34,7 +34,12 @@ defmodule JsonLiveviewRender.Renderer do
   attr(:dev_tools_open, :boolean, default: false)
 
   def render(assigns) do
-    validator = if assigns.allow_partial, do: &Spec.validate_partial/3, else: &Spec.validate/3
+    validator =
+      if assigns.allow_partial and function_exported?(Spec, :validate_partial, 3) do
+        &Spec.validate_partial/3
+      else
+        &Spec.validate/3
+      end
 
     validated_spec =
       case validator.(assigns.spec, assigns.catalog, strict: assigns.strict) do
@@ -66,7 +71,7 @@ defmodule JsonLiveviewRender.Renderer do
     <% end %>
 
     <%= if @dev_tools do %>
-      <DevTools.render
+      <JsonLiveviewRender.DevTools.render
         input_spec={@spec}
         render_spec={@_genui_spec}
         catalog={@catalog}

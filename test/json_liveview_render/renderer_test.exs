@@ -151,4 +151,86 @@ defmodule JsonLiveviewRender.RendererTest do
       )
     end
   end
+
+  test "partial specs fail by default when unresolved refs exist" do
+    spec = %{
+      "root" => "page",
+      "elements" => %{
+        "page" => %{"type" => "row", "props" => %{}, "children" => ["metric_1", "missing_1"]},
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    assert_raise ArgumentError, ~r/invalid JsonLiveviewRender spec/, fn ->
+      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{}
+      )
+    end
+  end
+
+  test "partial specs can render available elements when allow_partial is true" do
+    spec = %{
+      "root" => "page",
+      "elements" => %{
+        "page" => %{"type" => "row", "props" => %{}, "children" => ["metric_1", "missing_1"]},
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{},
+        allow_partial: true
+      )
+
+    assert html =~ "Revenue"
+    assert html =~ "$100"
+  end
+
+  test "renders dev tools inspector when enabled" do
+    spec = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{},
+        dev_tools: true,
+        dev_tools_open: true
+      )
+
+    assert html =~ "data-json-liveview-render-devtools"
+    assert html =~ "Input Spec"
+    assert html =~ "Rendered Spec"
+  end
+
+  test "renderer module does not keep an unused DevTools alias" do
+    source = File.read!(Path.expand("../../lib/json_liveview_render/renderer.ex", __DIR__))
+
+    refute String.contains?(source, "alias JsonLiveviewRender.DevTools")
+  end
 end
