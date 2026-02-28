@@ -271,41 +271,42 @@ Set `@show_dev_tools` from your own environment switch if needed, and keep
 
 ## Development Checks
 
-Run the verification gate for this branch:
+Use the canonical plan in `scripts/ci_plan.md` for all local and CI checks.
 
-```elixir
+```bash
 mix ci
 ```
 
-This runs formatting, compile with warnings-as-errors, and tests (including scaffold smoke coverage).
-
-Run the same gate locally (without GitHub Actions):
+For iterative local work, run only the cheapest parity slot:
 
 ```bash
-./scripts/ci_local.sh
+./scripts/ci_local.sh --matrix 1.15
 ```
 
-Or via make:
+For full local parity with CI, run both slots:
 
 ```bash
-make ci-local
+./scripts/ci_local.sh --matrix 1.15,1.19
 ```
 
-To mirror the CI version matrix locally, run the same command under both toolchains:
-
-- Elixir `1.15.8` / OTP `26.2`
-- Elixir `1.19.5` / OTP `28.0`
-
-For `asdf`, that is typically:
+Need a quick preview of what will run?
 
 ```bash
-asdf shell erlang 26.2
-asdf shell elixir 1.15.8-otp-26
-./scripts/ci_local.sh
+./scripts/ci_local.sh --dry-run --matrix 1.15,1.19
+```
 
-asdf shell erlang 28.0
-asdf shell elixir 1.19.5-otp-28
-./scripts/ci_local.sh
+Matrix behavior:
+
+- `1.15` (`1.15.8` / `26.2`) -> `deps`, `compile`, `test`
+- `1.19` (`1.19.5` / `28.0`) -> `deps`, `format`, `compile`, `test`
+
+Format is intentionally single-slot (`1.19`) to keep iterative runs faster.
+
+You can also run via make:
+
+```bash
+make ci-local         # cheapest matrix slot
+make ci-local-full    # full matrix parity
 ```
 
 ## Learnings

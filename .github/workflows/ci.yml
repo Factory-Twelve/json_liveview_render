@@ -7,6 +7,8 @@ on:
     tags:
       - "v*"
   pull_request:
+    branches:
+      - main
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -21,8 +23,12 @@ jobs:
         include:
           - elixir: "1.15.8"
             otp: "26.2"
+            matrix_label: "1.15"
+            run_format: false
           - elixir: "1.19.5"
             otp: "28.0"
+            matrix_label: "1.19"
+            run_format: true
 
     steps:
       - name: Checkout
@@ -54,11 +60,11 @@ jobs:
         run: mix deps.get
 
       - name: Check formatting
-        if: matrix.elixir == '1.19.5'
+        if: matrix.run_format
         run: mix format --check-formatted
 
       - name: Compile
         run: mix compile --warnings-as-errors
 
       - name: Run tests
-        run: mix test
+        run: MIX_PUBSUB=0 mix test
