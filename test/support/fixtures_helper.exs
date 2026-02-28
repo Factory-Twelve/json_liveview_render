@@ -41,6 +41,51 @@ defmodule JsonLiveviewRenderTest.Fixtures.Catalog do
   end
 end
 
+defmodule JsonLiveviewRenderTest.SchemaFixtures.SmallCatalog do
+  use JsonLiveviewRender.Catalog
+
+  component :metric do
+    description("Single KPI")
+    prop(:label, :string, required: true)
+    prop(:value, :string, required: true)
+    prop(:trend, :enum, values: [:up, :down, :flat])
+    permission(:member)
+  end
+end
+
+defmodule JsonLiveviewRenderTest.SchemaFixtures.MediumCatalog do
+  use JsonLiveviewRender.Catalog
+
+  component :metric do
+    description("Single KPI")
+    prop(:label, :string, required: true)
+    prop(:value, :string, required: true)
+    prop(:trend, :enum, values: [:up, :down, :flat])
+    permission(:member)
+  end
+
+  component :data_table do
+    description("Simple table")
+    prop(:rows_binding, :string, required: true, binding_type: {:list, :map})
+    prop(:columns, {:list, :string}, required: true)
+    prop(:show_totals, :boolean)
+    permission(:member)
+  end
+
+  component :admin_panel do
+    description("Admin-only panel")
+    prop(:title, :string, required: true)
+    permission(:admin)
+  end
+
+  component :card_list do
+    description("Card container for nested testing")
+    prop(:title, :string, required: true)
+    prop(:compact, :boolean)
+    permission(:member)
+  end
+end
+
 defmodule JsonLiveviewRenderTest.Fixtures.Components do
   use Phoenix.Component
 

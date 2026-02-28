@@ -8,6 +8,7 @@ defmodule JsonLiveviewRender.Schema.JSONSchemaBuilder do
   def build(catalog_module) do
     component_variants =
       catalog_module.components()
+      |> Enum.sort_by(fn {type, _component} -> Atom.to_string(type) end)
       |> Enum.map(fn {type, %ComponentDef{} = component} ->
         element_variant_schema(type, component)
       end)
@@ -52,7 +53,9 @@ defmodule JsonLiveviewRender.Schema.JSONSchemaBuilder do
 
   defp props_schema(%ComponentDef{props: props}) do
     properties =
-      Map.new(props, fn {name, prop_def} ->
+      props
+      |> Enum.sort_by(fn {name, _prop_def} -> Atom.to_string(name) end)
+      |> Map.new(fn {name, prop_def} ->
         {Atom.to_string(name), prop_schema(prop_def)}
       end)
 
@@ -60,6 +63,7 @@ defmodule JsonLiveviewRender.Schema.JSONSchemaBuilder do
       props
       |> Enum.filter(fn {_name, %PropDef{required: required?}} -> required? end)
       |> Enum.map(fn {name, _} -> Atom.to_string(name) end)
+      |> Enum.sort()
 
     base = %{
       "type" => "object",

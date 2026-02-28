@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "JsonLiveviewRender Spec",
+  "type": "object",
+  "required": [
+    "root",
+    "elements"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "root": {
+      "type": "string"
+    },
+    "elements": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "admin_panel",
+                "description": "Admin-only panel"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "card_list",
+                "description": "Card container for nested testing"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "compact": {
+                    "type": "boolean"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "data_table",
+                "description": "Simple table"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "rows_binding": {
+                    "type": "string"
+                  },
+                  "show_totals": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "columns",
+                  "rows_binding"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "metric",
+                "description": "Single KPI"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "trend": {
+                    "enum": [
+                      "up",
+                      "down",
+                      "flat"
+                    ]
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "label",
+                  "value"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
