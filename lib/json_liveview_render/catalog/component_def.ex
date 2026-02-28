@@ -54,7 +54,7 @@ defmodule JsonLiveviewRender.Catalog.ComponentDef do
           description: String.t() | nil,
           props: %{optional(atom()) => PropDef.t()},
           slots: [atom()],
-          permission: atom() | nil
+          permission: term() | nil
         }
 
   @spec new(atom()) :: t()
@@ -75,9 +75,9 @@ defmodule JsonLiveviewRender.Catalog.ComponentDef do
     %{component | slots: Enum.uniq(component.slots ++ [slot_name])}
   end
 
-  @spec put_permission(t(), atom()) :: t()
-  def put_permission(component, role) when is_atom(role) do
-    %{component | permission: role}
+  @spec put_permission(t(), term()) :: t()
+  def put_permission(component, required_role) do
+    %{component | permission: required_role}
   end
 
   @spec prop_names(t()) :: [atom()]

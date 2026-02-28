@@ -138,8 +138,7 @@ defmodule JsonLiveviewRender.Permissions do
         %{
           required_mode: :all_of,
           required_roles: required_roles,
-          deny_roles:
-            normalize_deny_list!(Map.get(required_role, :deny, []))
+          deny_roles: normalize_deny_list!(Map.get(required_role, :deny, []))
         }
 
       Map.has_key?(required_role, :any_of) ->
@@ -149,8 +148,7 @@ defmodule JsonLiveviewRender.Permissions do
         %{
           required_mode: :any_of,
           required_roles: required_roles,
-          deny_roles:
-            normalize_deny_list!(Map.get(required_role, :deny, []))
+          deny_roles: normalize_deny_list!(Map.get(required_role, :deny, []))
         }
 
       true ->
@@ -233,7 +231,9 @@ defmodule JsonLiveviewRender.Permissions do
     current_roles = Map.get(current_user, :roles)
     current_role = Map.get(current_user, :role)
 
-    resolved_roles = if is_nil(current_roles), do: Map.get(current_user, "roles"), else: current_roles
+    resolved_roles =
+      if is_nil(current_roles), do: Map.get(current_user, "roles"), else: current_roles
+
     resolved_role = if is_nil(current_role), do: Map.get(current_user, "role"), else: current_role
 
     cond do
@@ -252,7 +252,6 @@ defmodule JsonLiveviewRender.Permissions do
   end
 
   defp declared_roles(_current_user), do: []
-
 
   defp inheritance_graph(current_user) do
     case Map.get(current_user, :role_inheritance) || Map.get(current_user, "role_inheritance") do
