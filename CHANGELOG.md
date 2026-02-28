@@ -14,6 +14,12 @@
 
 ### Changes
 
+- Added canonical CI contract for `FAC-59` to harden local/CI parity and cost control:
+  - Added `scripts/ci_plan.md` as the source of truth for trigger policy, matrix, and check command contract.
+  - Updated `scripts/ci_local.sh` to execute the plan-defined matrix via `--matrix`, with dry-run support and explicit failure context.
+  - Synced `.github/workflows/ci.yml` to the same matrix policy (`1.15`/`1.19`, format on `1.19` only, `MIX_PUBSUB=0 mix test`).
+  - Added `test/ci_plan_test.exs` to enforce plan/script/workflow parity and document the intentional matrix-format split.
+
 - Added partial-spec validation path for streaming:
   - `JsonLiveviewRender.Spec.validate_partial/3`
   - `allow_missing_root` and `allow_unresolved_children` validation options

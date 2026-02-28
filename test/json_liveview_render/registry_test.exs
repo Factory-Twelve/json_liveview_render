@@ -1,8 +1,6 @@
 defmodule JsonLiveviewRender.RegistryTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureIO
-
   alias JsonLiveviewRender.Registry
   alias JsonLiveviewRenderTest.Fixtures.Registry, as: FixtureRegistry
 
