@@ -63,4 +63,14 @@ defmodule JsonLiveviewRender.Stream.Adapter.AnthropicTest do
 
     assert {:error, {:invalid_adapter_event, _payload}} = Anthropic.normalize_event(payload)
   end
+
+  test "returns explicit error when tool_use input contains non-stringable keys" do
+    payload = %{
+      "type" => "tool_use",
+      "name" => "json_liveview_render_event",
+      "input" => %{"event" => "root", "id" => "page", %{} => "not stringable"}
+    }
+
+    assert {:error, {:invalid_adapter_event, _payload}} = Anthropic.normalize_event(payload)
+  end
 end

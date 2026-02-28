@@ -46,3 +46,9 @@ Updated: 2026-02-25
 ### FAC-53: Implement child slot rendering ergonomics for renderer
 - Tests: passed
 - PR: https://github.com/Factory-Twelve/json_liveview_render/pull/4
+
+## 2026-02-28
+
+### FAC-54: Stabilize streaming event contract and adapter normalization
+- Tests: passed
+- PR: https://github.com/Factory-Twelve/json_liveview_render/pull/9
