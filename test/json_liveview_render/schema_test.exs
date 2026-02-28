@@ -83,6 +83,6 @@ defmodule JsonLiveviewRender.SchemaTest do
   end
 
   defp fixtures_dir do
-    Path.expand("../../fixtures/schema", __DIR__)
+    Path.expand("../fixtures/schema", __DIR__)
   end
 end
