@@ -212,7 +212,7 @@ run_check() {
   fi
 
   if command -v asdf >/dev/null 2>&1; then
-    if asdf shell erlang "$otp" asdf shell elixir "$elixir" bash -lc "$command"; then
+    if asdf shell erlang "$otp" bash -lc "asdf shell elixir \"$elixir\" bash -lc \"$command\""; then
       echo "  -> runtime ok via asdf: Elixir ${elixir}, OTP ${otp} for slot ${matrix}"
       return 0
     fi
