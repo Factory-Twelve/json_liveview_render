@@ -88,8 +88,11 @@ defmodule JsonLiveviewRender.Stream.Adapter.OpenAI do
           {:error, _} -> {:error, {:invalid_adapter_event, :arguments_must_be_map_or_json}}
         end
 
-      {:ok, _} -> {:error, {:invalid_adapter_event, :arguments_must_decode_to_map}}
-      {:error, reason} -> {:error, {:invalid_adapter_event, {:invalid_json_arguments, reason}}}
+      {:ok, _} ->
+        {:error, {:invalid_adapter_event, :arguments_must_decode_to_map}}
+
+      {:error, reason} ->
+        {:error, {:invalid_adapter_event, {:invalid_json_arguments, reason}}}
     end
   end
 
