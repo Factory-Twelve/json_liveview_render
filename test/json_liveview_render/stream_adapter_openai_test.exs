@@ -70,6 +70,21 @@ defmodule JsonLiveviewRender.Stream.Adapter.OpenAITest do
     assert {:error, {:invalid_adapter_event, _payload}} = OpenAI.normalize_event(payload)
   end
 
+  test "returns explicit error when output_item arguments contain keys that cannot be stringified" do
+    invalid_key = [0xD800]
+
+    payload = %{
+      "type" => "response.output_item.done",
+      "item" => %{
+        "type" => "function_call",
+        "name" => "json_liveview_render_event",
+        "arguments" => %{"event" => "root", "id" => "page", invalid_key => "not stringable"}
+      }
+    }
+
+    assert {:error, {:invalid_adapter_event, _payload}} = OpenAI.normalize_event(payload)
+  end
+
   test "returns explicit error for malformed function_call_arguments payload" do
     payload = %{
       "type" => "response.function_call_arguments.done",

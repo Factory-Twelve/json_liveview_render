@@ -104,7 +104,7 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
   defp normalize_payload_key(key) do
     {:ok, to_string(key)}
   rescue
-    Protocol.UndefinedError ->
+    _ ->
       {:error, {:invalid_payload_key, key}}
   end
 end
