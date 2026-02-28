@@ -35,6 +35,10 @@ defmodule JsonLiveviewRender.Stream.Adapter.OpenAITest do
     assert :ignore = OpenAI.normalize_event(%{"type" => "response.output_text.delta"})
   end
 
+  test "ignores unrelated payloads with non-stringable keys" do
+    assert :ignore = OpenAI.normalize_event(%{"type" => "response.output_text.delta", %{} => 1})
+  end
+
   test "normalizes output_item payload with atom keys" do
     payload = %{
       type: "response.output_item.done",

@@ -24,55 +24,112 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
 
   @impl true
   def normalize_event(payload) when is_map(payload) do
-    case normalize_payload_keys(payload) do
-      {:ok, normalized_payload} ->
-        case normalized_payload do
-          %{"type" => "tool_use", "name" => @tool_name, "input" => input} ->
-            map_input(input)
+    case event_type(payload) do
+      :ignore ->
+        :ignore
 
-          %{"type" => "tool_use", "name" => @tool_name} ->
-            {:error, {:invalid_adapter_event, normalized_payload}}
+      {:tool_use} ->
+        normalize_tool_use(payload)
 
-          %{
-            "type" => "content_block_stop",
-            "content_block" => %{"type" => "tool_use", "name" => @tool_name, "input" => input}
-          } ->
-            map_input(input)
+      {:content_block_stop} ->
+        normalize_content_block_stop(payload)
+    end
+  end
 
-          %{
-            "type" => "content_block_stop",
-            "content_block" => %{"type" => "tool_use", "name" => @tool_name}
-          } ->
-            {:error, {:invalid_adapter_event, normalized_payload}}
+  def normalize_event(_payload), do: :ignore
 
-          _ ->
-            :ignore
+  defp event_type(payload) do
+    case get_payload_value(payload, "type") do
+      nil ->
+        :ignore
+
+      value ->
+        case to_string_safe(value) do
+          {:ok, "tool_use"} -> {:tool_use}
+          {:ok, "content_block_stop"} -> {:content_block_stop}
+          {:ok, _} -> :ignore
+          :error -> :ignore
         end
+    end
+  end
+
+  defp normalize_tool_use(payload) do
+    name = get_payload_value(payload, "name")
+
+    if tool_name?(name) do
+      map_input(get_payload_value(payload, "input"))
+    else
+      :ignore
+    end
+  end
+
+  defp normalize_content_block_stop(payload) do
+    case get_payload_value(payload, "content_block") do
+      content_block when is_map(content_block) ->
+        is_tool_use = is_tool_use?(get_payload_value(content_block, "type"))
+        has_tool_name = tool_name?(get_payload_value(content_block, "name"))
+
+        if is_tool_use and has_tool_name do
+          map_input(get_payload_value(content_block, "input"))
+        else
+          :ignore
+        end
+
+      _ ->
+        :ignore
+    end
+  end
+
+  defp is_tool_use?(value) do
+    case to_string_safe(value) do
+      {:ok, "tool_use"} -> true
+      _ -> false
+    end
+  end
+
+  defp tool_name?(name) do
+    case to_string_safe(name) do
+      {:ok, @tool_name} ->
+        true
+
+      _ ->
+        false
+    end
+  end
+
+  defp map_input(payload) when is_map(payload) do
+    case normalize_payload_keys(payload) do
+      {:ok, %{"event" => "root", "id" => id}} when is_binary(id) ->
+        {:ok, {:root, id}}
+
+      {:ok, %{"event" => "element", "id" => id, "element" => element}}
+      when is_binary(id) and is_map(element) ->
+        {:ok, {:element, id, element}}
+
+      {:ok, %{"event" => "finalize"}} ->
+        {:ok, {:finalize}}
+
+      {:ok, normalized_payload} ->
+        {:error, {:invalid_adapter_event, normalized_payload}}
 
       {:error, _} ->
         {:error, {:invalid_adapter_event, payload}}
     end
   end
 
-  def normalize_event(_payload), do: :ignore
+  defp map_input(payload), do: {:error, {:invalid_adapter_event, payload}}
 
-  defp map_input(%{"event" => "root", "id" => id}) when is_binary(id),
-    do: {:ok, {:root, id}}
-
-  defp map_input(%{"event" => "element", "id" => id, "element" => element})
-       when is_binary(id) and is_map(element),
-       do: {:ok, {:element, id, element}}
-
-  defp map_input(%{"event" => "finalize"}), do: {:ok, {:finalize}}
-
-  defp map_input(payload) when is_map(payload) do
-    case normalize_payload_keys(payload) do
-      {:ok, normalized_payload} -> {:error, {:invalid_adapter_event, normalized_payload}}
-      {:error, _} -> {:error, {:invalid_adapter_event, payload}}
-    end
+  defp get_payload_value(payload, key) when is_map(payload) do
+    Map.get(payload, key) || Map.get(payload, String.to_atom(key))
   end
 
-  defp map_input(payload), do: {:error, {:invalid_adapter_event, payload}}
+  defp to_string_safe(value) do
+    try do
+      {:ok, to_string(value)}
+    rescue
+      _ -> :error
+    end
+  end
 
   defp normalize_payload_keys(map) when is_map(map) do
     Enum.reduce_while(Map.to_list(map), {:ok, %{}}, fn {k, v}, {:ok, normalized_map} ->

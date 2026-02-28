@@ -30,6 +30,10 @@ defmodule JsonLiveviewRender.Stream.Adapter.AnthropicTest do
     assert :ignore = Anthropic.normalize_event(%{"type" => "message_delta"})
   end
 
+  test "ignores unrelated payloads with non-stringable keys" do
+    assert :ignore = Anthropic.normalize_event(%{"type" => "message_delta", %{} => 1})
+  end
+
   test "normalizes atom-keyed payloads" do
     payload = %{
       type: "content_block_stop",
