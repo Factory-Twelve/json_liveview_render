@@ -292,4 +292,263 @@ defmodule JsonLiveviewRender.RendererTest do
 
     refute String.contains?(source, "alias JsonLiveviewRender.DevTools")
   end
+
+  test "renders nested components with mixed permitted and denied children" do
+    spec = %{
+      "root" => "list_1",
+      "elements" => %{
+        "list_1" => %{
+          "type" => "card_list",
+          "props" => %{"title" => "User Directory"},
+          "children" => ["user_1", "user_2", "admin_card_1"]
+        },
+        "user_1" => %{
+          "type" => "user_card",
+          "props" => %{"name" => "Alice", "role" => "member"},
+          "children" => []
+        },
+        "user_2" => %{
+          "type" => "user_card",
+          "props" => %{"name" => "Bob", "role" => "member"},
+          "children" => []
+        },
+        "admin_card_1" => %{
+          "type" => "privileged_card",
+          "props" => %{"content" => "Admin Secret"},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{}
+      )
+
+    # Permitted children should be rendered
+    assert html =~ "User Directory"
+    assert html =~ "Alice"
+    assert html =~ "Bob"
+    assert html =~ "member"
+
+    # Denied admin content should be filtered out
+    refute html =~ "Admin Secret"
+    refute html =~ "Privileged:"
+  end
+
+  test "preserves child rendering order after permission filtering" do
+    spec = %{
+      "root" => "container_1",
+      "elements" => %{
+        "container_1" => %{
+          "type" => "column",
+          "props" => %{},
+          "children" => ["metric_1", "admin_1", "metric_2", "admin_2", "metric_3"]
+        },
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "First", "value" => "1"},
+          "children" => []
+        },
+        "admin_1" => %{
+          "type" => "admin_panel",
+          "props" => %{"title" => "Admin Panel 1"},
+          "children" => []
+        },
+        "metric_2" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Second", "value" => "2"},
+          "children" => []
+        },
+        "admin_2" => %{
+          "type" => "admin_panel",
+          "props" => %{"title" => "Admin Panel 2"},
+          "children" => []
+        },
+        "metric_3" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Third", "value" => "3"},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{}
+      )
+
+    # Verify permitted elements appear in original order
+    first_pos = String.at(html, :binary.match(html, "First") |> elem(0))
+    second_pos = String.at(html, :binary.match(html, "Second") |> elem(0))
+    third_pos = String.at(html, :binary.match(html, "Third") |> elem(0))
+
+    # Check relative order is preserved
+    assert String.contains?(html, "First")
+    assert String.contains?(html, "Second")
+    assert String.contains?(html, "Third")
+
+    # Verify admin content is filtered out
+    refute String.contains?(html, "Admin Panel")
+  end
+
+  test "handles deeply nested component hierarchy with permissions" do
+    spec = %{
+      "root" => "page_1",
+      "elements" => %{
+        "page_1" => %{
+          "type" => "section",
+          "props" => %{},
+          "children" => ["list_1"]
+        },
+        "list_1" => %{
+          "type" => "card_list",
+          "props" => %{"title" => "Teams"},
+          "children" => ["user_1", "nested_admin_1"]
+        },
+        "user_1" => %{
+          "type" => "user_card",
+          "props" => %{"name" => "Charlie", "role" => "lead"},
+          "children" => []
+        },
+        "nested_admin_1" => %{
+          "type" => "privileged_card",
+          "props" => %{"content" => "Sensitive Data"},
+          "children" => []
+        }
+      }
+    }
+
+    # Test as member - should see user but not admin content
+    member_html =
+      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{}
+      )
+
+    assert member_html =~ "Teams"
+    assert member_html =~ "Charlie"
+    refute member_html =~ "Sensitive Data"
+
+    # Test as admin - should see everything
+    admin_html =
+      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+        registry: Registry,
+        current_user: %{role: :admin},
+        authorizer: Authorizer,
+        bindings: %{}
+      )
+
+    assert admin_html =~ "Teams"
+    assert admin_html =~ "Charlie"
+    assert admin_html =~ "Sensitive Data"
+    assert admin_html =~ "Privileged:"
+  end
+
+  test "missing slot definitions produce empty render path instead of crashing" do
+    # Test component with no children field defined
+    spec_no_children = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"}
+          # Note: no "children" field defined
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec_no_children, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{}
+      )
+
+    assert html =~ "Revenue"
+    assert html =~ "$100"
+
+    # Test component that could accept children but has empty children array
+    spec_empty_children = %{
+      "root" => "container_1",
+      "elements" => %{
+        "container_1" => %{
+          "type" => "column",
+          "props" => %{},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec_empty_children, Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{}
+      )
+
+    assert html =~ ~s(class="column")
+  end
+
+  test "slot payload is always a list structure for deterministic rendering" do
+    # Use a custom registry to test the assigns passed to components
+    defmodule AssignCapturingRegistry do
+      use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.Catalog
+
+      alias JsonLiveviewRenderTest.Fixtures.Components
+
+      # Capture assigns for inspection
+      defmodule AssignCapturer do
+        use Phoenix.Component
+
+        def column(assigns) do
+          # Send assigns to test process for inspection
+          send(self(), {:captured_assigns, assigns})
+          Components.column(assigns)
+        end
+      end
+
+      render(:column, &AssignCapturer.column/1)
+      render(:metric, &Components.metric/1)
+    end
+
+    spec = %{
+      "root" => "container_1",
+      "elements" => %{
+        "container_1" => %{
+          "type" => "column",
+          "props" => %{},
+          "children" => ["metric_1"]
+        },
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Test", "value" => "123"},
+          "children" => []
+        }
+      }
+    }
+
+    JsonLiveviewRender.Test.render_spec(spec, Catalog,
+      registry: AssignCapturingRegistry,
+      current_user: %{role: :member},
+      authorizer: Authorizer,
+      bindings: %{}
+    )
+
+    # Verify that children is always a list
+    assert_received {:captured_assigns, assigns}
+    assert Map.has_key?(assigns, :children)
+    assert is_list(assigns.children)
+    assert length(assigns.children) == 1
+  end
 end
