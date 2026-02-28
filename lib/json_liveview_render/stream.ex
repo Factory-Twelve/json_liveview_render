@@ -130,18 +130,18 @@ defmodule JsonLiveviewRender.Stream do
     require_complete? = Keyword.get(opts, :require_complete, true)
     strict? = Keyword.get(opts, :strict, true)
 
-    validation_result =
-      if stream.complete? do
-        Spec.validate(to_spec(stream), catalog, strict: strict?)
-      else
-        Spec.validate_partial(to_spec(stream), catalog, strict: strict?)
-      end
-
     cond do
       require_complete? and not stream.complete? ->
         {:error, :stream_not_finalized}
 
       true ->
+        validation_result =
+          if stream.complete? do
+            Spec.validate(to_spec(stream), catalog, strict: strict?)
+          else
+            Spec.validate_partial(to_spec(stream), catalog, strict: strict?)
+          end
+
         case validation_result do
           {:ok, spec} -> {:ok, spec}
           {:error, reasons} -> {:error, reasons}

@@ -6,6 +6,10 @@ defmodule JsonLiveviewRender.StreamTest do
   alias JsonLiveviewRender.Stream
   alias JsonLiveviewRenderTest.Fixtures.Catalog
 
+  defmodule ValidationGuardCatalog do
+    def component(_type), do: raise("spec validation should not run for incomplete stream")
+  end
+
   test "new/0 initializes empty stream state" do
     assert Stream.new() == %{root: nil, elements: %{}, complete?: false}
   end
@@ -176,6 +180,22 @@ defmodule JsonLiveviewRender.StreamTest do
   test "finalize/3 requires finalize event by default" do
     {:ok, stream} = Stream.ingest(Stream.new(), {:root, "page"}, Catalog)
     assert {:error, :stream_not_finalized} = Stream.finalize(stream, Catalog)
+  end
+
+  test "finalize/3 short-circuits before validation when stream incomplete" do
+    {:ok, stream} =
+      Stream.ingest_many(
+        Stream.new(),
+        [
+          {:root, "page"},
+          {:element, "page", %{"type" => "row", "props" => %{}, "children" => ["metric_1"]}},
+          {:element, "metric_1",
+           %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}}
+        ],
+        Catalog
+      )
+
+    assert {:error, :stream_not_finalized} = Stream.finalize(stream, ValidationGuardCatalog)
   end
 
   test "ingest/3 does not allow mutation after finalize" do
