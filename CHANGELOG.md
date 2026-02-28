@@ -39,6 +39,11 @@
   - `JsonLiveviewRender.Renderer` now gates DevTools output behind environment/config checks
   - added hard kill switch `dev_tools_force_disable` for sensitive environments
   - added test coverage for absent DevTools rendering when disabled
+- Added catalog schema/prompt golden contract hardening (FAC-56):
+  - Added golden fixture exports for small and medium catalog schemas/prompts under `test/fixtures/schema`
+  - Tightened `JsonLiveviewRender.Schema` output determinism by sorting components and prop fields during prompt/schema generation
+  - Added strict-mode import regression coverage for schema contract consistency (`unknown_prop` rejection in strict mode with permissive-mode exception)
+  - Added doctest-backed documentation examples for `JsonLiveviewRender.Schema` export APIs
 
 ## 0.2.0 - 2026-02-26
 

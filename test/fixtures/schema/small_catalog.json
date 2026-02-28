@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "title": "JsonLiveviewRender Spec",
+  "type": "object",
+  "required": [
+    "root",
+    "elements"
+  ],
+  "properties": {
+    "root": {
+      "type": "string"
+    },
+    "elements": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "column",
+                "description": "Vertical layout container"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "gap": {
+                    "default": "md",
+                    "enum": [
+                      "sm",
+                      "md",
+                      "lg"
+                    ]
+                  }
+                }
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "grid",
+                "description": "Grid layout container"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "columns": {
+                    "type": "integer",
+                    "default": 12
+                  },
+                  "gap": {
+                    "default": "md",
+                    "enum": [
+                      "sm",
+                      "md",
+                      "lg"
+                    ]
+                  }
+                }
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "metric",
+                "description": "Single KPI"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "trend": {
+                    "default": "nil",
+                    "enum": [
+                      "up",
+                      "down",
+                      "flat"
+                    ]
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "label",
+                  "value"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "row",
+                "description": "Horizontal layout container"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "gap": {
+                    "default": "md",
+                    "enum": [
+                      "sm",
+                      "md",
+                      "lg"
+                    ]
+                  }
+                }
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "section",
+                "description": "Titled content section with optional collapse"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "collapsed": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "collapsible": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

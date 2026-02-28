@@ -8,6 +8,7 @@ defmodule JsonLiveviewRender.Schema.PromptBuilder do
   def build(catalog_module) do
     components_text =
       catalog_module.components()
+      |> Enum.sort_by(fn {type, _component} -> Atom.to_string(type) end)
       |> Enum.map(fn {type, component} -> component_prompt(type, component) end)
       |> Enum.join("\n\n")
 
@@ -28,6 +29,7 @@ defmodule JsonLiveviewRender.Schema.PromptBuilder do
   defp component_prompt(type, %ComponentDef{} = component) do
     props =
       component.props
+      |> Enum.sort_by(fn {prop_name, _prop_def} -> Atom.to_string(prop_name) end)
       |> Enum.map(fn {prop_name, prop_def} -> "- #{prop_line(prop_name, prop_def)}" end)
       |> Enum.join("\n")
 
