@@ -1,16 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "JsonLiveviewRender Spec",
-  "type": "object",
-  "required": [
-    "root",
-    "elements"
-  ],
   "additionalProperties": false,
   "properties": {
-    "root": {
-      "type": "string"
-    },
     "elements": {
       "type": "object",
       "additionalProperties": {
@@ -93,6 +84,41 @@
             "additionalProperties": false,
             "properties": {
               "type": {
+                "const": "column",
+                "description": "Vertical layout container"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "gap": {
+                    "default": "md",
+                    "enum": [
+                      "sm",
+                      "md",
+                      "lg"
+                    ]
+                  }
+                }
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
                 "const": "data_table",
                 "description": "Simple table"
               },
@@ -101,10 +127,10 @@
                 "additionalProperties": false,
                 "properties": {
                   "columns": {
-                    "type": "array",
                     "items": {
                       "type": "string"
-                    }
+                    },
+                    "type": "array"
                   },
                   "rows_binding": {
                     "type": "string"
@@ -136,6 +162,45 @@
             "additionalProperties": false,
             "properties": {
               "type": {
+                "const": "grid",
+                "description": "Grid layout container"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "columns": {
+                    "default": 12,
+                    "type": "integer"
+                  },
+                  "gap": {
+                    "default": "md",
+                    "enum": [
+                      "sm",
+                      "md",
+                      "lg"
+                    ]
+                  }
+                }
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
                 "const": "metric",
                 "description": "Single KPI"
               },
@@ -147,6 +212,7 @@
                     "type": "string"
                   },
                   "trend": {
+                    "default": "nil",
                     "enum": [
                       "up",
                       "down",
@@ -170,9 +236,95 @@
                 "default": []
               }
             }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "row",
+                "description": "Horizontal layout container"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "gap": {
+                    "default": "md",
+                    "enum": [
+                      "sm",
+                      "md",
+                      "lg"
+                    ]
+                  }
+                }
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "props"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "section",
+                "description": "Titled content section with optional collapse"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "collapsed": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "collapsible": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            }
           }
         ]
-      }
+      },
+      "type": "object"
+    },
+    "root": {
+      "type": "string"
     }
-  }
+  },
+  "required": [
+    "root",
+    "elements"
+  ],
+  "title": "JsonLiveviewRender Spec",
+  "type": "object"
 }
