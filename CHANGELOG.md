@@ -14,6 +14,10 @@
 
 ### Changes
 
+- Added `mix json_liveview_render.check_metadata` as a reproducible metadata validation
+  command for required Hex fields before release.
+- Documented a release workflow in `README.md` that runs the new metadata check
+  before `mix hex.publish --dry-run`.
 - Added canonical CI contract for `FAC-59` to harden local/CI parity and cost control:
   - Added `scripts/ci_plan.md` as the source of truth for trigger policy, matrix, and check command contract.
   - Updated `scripts/ci_local.sh` to execute the plan-defined matrix via `--matrix`, with dry-run support and explicit failure context.

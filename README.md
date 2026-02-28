@@ -361,6 +361,16 @@ Set `@show_dev_tools` from your own environment switch if needed, and keep
 - Phoenix >= 1.8
 - Phoenix LiveView >= 1.1
 
+## Release Workflow
+
+Before publishing a new Hex release, run metadata validation and the full release check sequence:
+
+1. `mix json_liveview_render.check_metadata`
+2. `mix format --check-formatted`
+3. `mix compile --warnings-as-errors`
+4. `MIX_PUBSUB=0 mix test`
+5. `mix hex.publish --dry-run`
+
 ## Development Checks
 
 Use the canonical plan in `scripts/ci_plan.md` for all local and CI checks.
