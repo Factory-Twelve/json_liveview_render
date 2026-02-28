@@ -169,6 +169,15 @@ defmodule JsonLiveviewRender.Renderer do
         end
       end)
 
-    Map.put(prop_assigns, :children, children)
+    # Canonical child slot projection: :children is the primary slot key.
+    # Always provide a list structure - empty list for missing slots instead of nil.
+    # This ensures deterministic slot payload shape for component rendering.
+    normalized_children = normalize_child_slots(children)
+
+    Map.put(prop_assigns, :children, normalized_children)
   end
+
+  defp normalize_child_slots(children) when is_list(children), do: children
+  defp normalize_child_slots(nil), do: []
+  defp normalize_child_slots(_), do: []
 end

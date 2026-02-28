@@ -20,6 +20,25 @@ defmodule JsonLiveviewRenderTest.Fixtures.Catalog do
     prop(:title, :string, required: true)
     permission(:admin)
   end
+
+  component :card_list do
+    description("Card container for nested testing")
+    prop(:title, :string, required: true)
+    permission(:member)
+  end
+
+  component :user_card do
+    description("User card with member permissions")
+    prop(:name, :string, required: true)
+    prop(:role, :string)
+    permission(:member)
+  end
+
+  component :privileged_card do
+    description("Privileged content card")
+    prop(:content, :string, required: true)
+    permission(:admin)
+  end
 end
 
 defmodule JsonLiveviewRenderTest.Fixtures.Components do
@@ -106,6 +125,44 @@ defmodule JsonLiveviewRenderTest.Fixtures.Components do
     </div>
     """
   end
+
+  attr(:title, :string, required: true)
+  attr(:children, :list, default: [])
+
+  def card_list(assigns) do
+    ~H"""
+    <div class="card-list" data-title={@title}>
+      <h3><%= @title %></h3>
+      <div class="cards">
+        <%= for child <- @children do %>
+          <%= child %>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  attr(:name, :string, required: true)
+  attr(:role, :string, default: nil)
+
+  def user_card(assigns) do
+    ~H"""
+    <div class="user-card">
+      <span class="name"><%= @name %></span>
+      <span :if={@role} class="role"><%= @role %></span>
+    </div>
+    """
+  end
+
+  attr(:content, :string, required: true)
+
+  def privileged_card(assigns) do
+    ~H"""
+    <div class="privileged-card">
+      <strong>Privileged:</strong> <%= @content %>
+    </div>
+    """
+  end
 end
 
 defmodule JsonLiveviewRenderTest.Fixtures.Registry do
@@ -120,6 +177,9 @@ defmodule JsonLiveviewRenderTest.Fixtures.Registry do
   render(:column, &Components.column/1)
   render(:section, &Components.section/1)
   render(:grid, &Components.grid/1)
+  render(:card_list, &Components.card_list/1)
+  render(:user_card, &Components.user_card/1)
+  render(:privileged_card, &Components.privileged_card/1)
 end
 
 defmodule JsonLiveviewRenderTest.Fixtures.Authorizer do
