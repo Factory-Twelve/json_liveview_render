@@ -20,7 +20,7 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
 
   @behaviour JsonLiveviewRender.Stream.Adapter
 
-  @tool_name "json_liveview_render_event"
+  alias JsonLiveviewRender.Stream.Adapter
 
   @impl true
   def normalize_event(payload) when is_map(payload) do
@@ -39,12 +39,12 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
   def normalize_event(_payload), do: :ignore
 
   defp event_type(payload) do
-    case get_payload_value(payload, "type") do
+    case Adapter.get_value(payload, "type") do
       nil ->
         :ignore
 
       value ->
-        case to_string_safe(value) do
+        case Adapter.to_string_safe(value) do
           {:ok, "tool_use"} -> {:tool_use}
           {:ok, "content_block_stop"} -> {:content_block_stop}
           {:ok, _} -> :ignore
@@ -54,23 +54,21 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
   end
 
   defp normalize_tool_use(payload) do
-    name = get_payload_value(payload, "name")
-
-    if tool_name?(name) do
-      map_input(get_payload_value(payload, "input"))
+    if Adapter.tool_name?(Adapter.get_value(payload, "name")) do
+      map_input(Adapter.get_value(payload, "input"))
     else
       :ignore
     end
   end
 
   defp normalize_content_block_stop(payload) do
-    case get_payload_value(payload, "content_block") do
+    case Adapter.get_value(payload, "content_block") do
       content_block when is_map(content_block) ->
-        is_tool_use = is_tool_use?(get_payload_value(content_block, "type"))
-        has_tool_name = tool_name?(get_payload_value(content_block, "name"))
+        is_tool_use = is_tool_use?(Adapter.get_value(content_block, "type"))
+        has_tool_name = Adapter.tool_name?(Adapter.get_value(content_block, "name"))
 
         if is_tool_use and has_tool_name do
-          map_input(get_payload_value(content_block, "input"))
+          map_input(Adapter.get_value(content_block, "input"))
         else
           :ignore
         end
@@ -81,24 +79,14 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
   end
 
   defp is_tool_use?(value) do
-    case to_string_safe(value) do
+    case Adapter.to_string_safe(value) do
       {:ok, "tool_use"} -> true
       _ -> false
     end
   end
 
-  defp tool_name?(name) do
-    case to_string_safe(name) do
-      {:ok, @tool_name} ->
-        true
-
-      _ ->
-        false
-    end
-  end
-
   defp map_input(payload) when is_map(payload) do
-    case normalize_payload_keys(payload) do
+    case Adapter.normalize_keys(payload) do
       {:ok, %{"event" => "root", "id" => id}} when is_binary(id) ->
         {:ok, {:root, id}}
 
@@ -118,50 +106,4 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
   end
 
   defp map_input(payload), do: {:error, {:invalid_adapter_event, payload}}
-
-  defp get_payload_value(payload, key) when is_map(payload) do
-    Map.get(payload, key) || Map.get(payload, String.to_atom(key))
-  end
-
-  defp to_string_safe(value) do
-    try do
-      {:ok, to_string(value)}
-    rescue
-      _ -> :error
-    end
-  end
-
-  defp normalize_payload_keys(map) when is_map(map) do
-    Enum.reduce_while(Map.to_list(map), {:ok, %{}}, fn {k, v}, {:ok, normalized_map} ->
-      with {:ok, normalized_k} <- normalize_payload_key(k),
-           {:ok, normalized_v} <- normalize_payload_keys(v) do
-        {:cont, {:ok, Map.put(normalized_map, normalized_k, normalized_v)}}
-      else
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
-  end
-
-  defp normalize_payload_keys(list) when is_list(list) do
-    list
-    |> Enum.reduce_while({:ok, []}, fn value, {:ok, acc} ->
-      case normalize_payload_keys(value) do
-        {:ok, normalized_value} -> {:cont, {:ok, [normalized_value | acc]}}
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
-    |> case do
-      {:ok, normalized} -> {:ok, Enum.reverse(normalized)}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp normalize_payload_keys(value), do: {:ok, value}
-
-  defp normalize_payload_key(key) do
-    {:ok, to_string(key)}
-  rescue
-    _ ->
-      {:error, {:invalid_payload_key, key}}
-  end
 end

@@ -52,11 +52,9 @@ defmodule JsonLiveviewRender.Stream do
   @spec new() :: t()
   def new, do: %{root: nil, elements: %{}, complete?: false}
 
-  @spec ingest(t(), event(), module()) :: {:ok, t()} | {:error, term()}
-  def ingest(stream, event, catalog), do: ingest(stream, event, catalog, [])
-
   @spec ingest(t(), event(), module(), keyword()) :: {:ok, t()} | {:error, term()}
-  def ingest(stream, event, catalog, opts), do: process_transition(stream, event, catalog, opts)
+  def ingest(stream, event, catalog, opts \\ []),
+    do: process_transition(stream, event, catalog, opts)
 
   defp process_transition(%{complete?: true} = stream, {:finalize}, _catalog, _opts),
     do: {:ok, stream}
@@ -119,11 +117,8 @@ defmodule JsonLiveviewRender.Stream do
   defp process_transition(_stream, event, _catalog, _opts),
     do: {:error, {:invalid_stream_event, event}}
 
-  @spec ingest_many(t(), [event()], module()) :: {:ok, t()} | {:error, term(), t()}
-  def ingest_many(stream, events, catalog), do: ingest_many(stream, events, catalog, [])
-
   @spec ingest_many(t(), [event()], module(), keyword()) :: {:ok, t()} | {:error, term(), t()}
-  def ingest_many(stream, events, catalog, opts) when is_list(events) and is_list(opts) do
+  def ingest_many(stream, events, catalog, opts \\ []) when is_list(events) and is_list(opts) do
     Enum.reduce_while(events, {:ok, stream}, fn event, {:ok, acc} ->
       case ingest(acc, event, catalog, opts) do
         {:ok, next} -> {:cont, {:ok, next}}
@@ -144,18 +139,11 @@ defmodule JsonLiveviewRender.Stream do
       require_complete? and not stream.complete? ->
         {:error, :stream_not_finalized}
 
-      true ->
-        validation_result =
-          if stream.complete? do
-            Spec.validate(to_spec(stream), catalog, strict: strict?)
-          else
-            Spec.validate_partial(to_spec(stream), catalog, strict: strict?)
-          end
+      stream.complete? ->
+        Spec.validate(to_spec(stream), catalog, strict: strict?)
 
-        case validation_result do
-          {:ok, spec} -> {:ok, spec}
-          {:error, reasons} -> {:error, reasons}
-        end
+      true ->
+        Spec.validate_partial(to_spec(stream), catalog, strict: strict?)
     end
   end
 
