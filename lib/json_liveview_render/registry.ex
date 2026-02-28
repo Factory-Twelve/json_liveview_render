@@ -113,10 +113,13 @@ defmodule JsonLiveviewRender.Registry do
       unknown_mappings = mapped_types -- catalog_types
 
       if unknown_mappings != [] do
-        IO.warn(
-          "registry #{inspect(registry_module)} maps unknown component types #{inspect(unknown_mappings)} " <>
-            "that do not exist in #{inspect(catalog_module)}"
-        )
+        available_types = catalog_types |> Enum.map(&inspect/1) |> Enum.join(", ")
+
+        raise CompileError,
+          description:
+            "registry #{inspect(registry_module)} maps unknown component types #{inspect(unknown_mappings)} " <>
+              "that do not exist in catalog #{inspect(catalog_module)}.\n" <>
+              "Available types: [#{available_types}]"
       end
 
       if check_catalog_coverage do

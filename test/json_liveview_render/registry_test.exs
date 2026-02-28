@@ -23,17 +23,44 @@ defmodule JsonLiveviewRender.RegistryTest do
     end
   end
 
-  test "compile-time warns when registry maps unknown catalog types" do
-    warning =
-      capture_io(:stderr, fn ->
+  test "compile-time error when registry maps unknown catalog types" do
+    assert_raise CompileError, ~r/maps unknown component types/, fn ->
+      Code.compile_string("""
+      defmodule JsonLiveviewRenderTest.ErrorRegistry do
+        use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.Catalog
+        render :unknown_component, &Function.identity/1
+      end
+      """)
+    end
+  end
+
+  test "compile error includes available types in message" do
+    error =
+      assert_raise CompileError, fn ->
         Code.compile_string("""
-        defmodule JsonLiveviewRenderTest.WarnRegistry do
+        defmodule JsonLiveviewRenderTest.DetailedErrorRegistry do
           use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.Catalog
-          render :unknown_component, &Function.identity/1
+          render :nonexistent_type, &Function.identity/1
         end
         """)
-      end)
+      end
 
-    assert warning =~ "maps unknown component types"
+    # Should mention the unknown type
+    assert error.description =~ ":nonexistent_type"
+    # Should include available types
+    assert error.description =~ "Available types:"
+    assert error.description =~ ":metric"
+    assert error.description =~ ":data_table"
+  end
+
+  test "valid registry with known types compiles successfully" do
+    # Should not raise
+    Code.compile_string("""
+    defmodule JsonLiveviewRenderTest.ValidRegistry do
+      use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.Catalog
+      render :metric, &Function.identity/1
+      render :data_table, &Function.identity/1
+    end
+    """)
   end
 end
