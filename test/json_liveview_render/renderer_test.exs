@@ -385,13 +385,23 @@ defmodule JsonLiveviewRender.RendererTest do
       )
 
     # Verify permitted elements appear in original order
-    first_pos = :binary.match(html, "First") |> elem(0)
-    second_pos = :binary.match(html, "Second") |> elem(0)
-    third_pos = :binary.match(html, "Third") |> elem(0)
+    first_match = :binary.match(html, "First")
+    second_match = :binary.match(html, "Second")
+    third_match = :binary.match(html, "Third")
+
+    # All elements should be present
+    assert first_match != :nomatch, "First should be present in HTML"
+    assert second_match != :nomatch, "Second should be present in HTML"
+    assert third_match != :nomatch, "Third should be present in HTML"
+
+    # Extract positions for order checking
+    first_pos = elem(first_match, 0)
+    second_pos = elem(second_match, 0)
+    third_pos = elem(third_match, 0)
 
     # Check relative order is preserved
-    assert first_pos < second_pos, "First should appear before Second"
-    assert second_pos < third_pos, "Second should appear before Third"
+    assert first_pos < second_pos, "First should appear before Second (#{first_pos} < #{second_pos})"
+    assert second_pos < third_pos, "Second should appear before Third (#{second_pos} < #{third_pos})"
 
     # Verify admin content is filtered out
     refute String.contains?(html, "Admin Panel")
