@@ -193,6 +193,40 @@ run_check() {
   fi
 }
 
+ensure_toolchain() {
+  local version="$1"
+  local expected_elixir="$2"
+  local expected_otp="$3"
+
+  local actual_elixir actual_otp expected_otp_major
+
+  if ! command -v elixir >/dev/null 2>&1; then
+    echo "❌ Matrix slot ${version} requires Elixir ${expected_elixir} and OTP ${expected_otp}, but 'elixir' is not installed or not on PATH." >&2
+    echo "   Configure your local toolchain (asdf/mise/kerl) before running CI parity locally." >&2
+    exit 1
+  fi
+
+  actual_elixir="$(elixir -e 'IO.puts(System.version())' 2>/dev/null || true)"
+  actual_otp="$(elixir -e 'IO.puts(:erlang.system_info(:otp_release))' 2>/dev/null || true)"
+
+  if [ -z "$actual_elixir" ] || [ -z "$actual_otp" ]; then
+    echo "❌ Unable to read local Elixir/OTP versions from 'elixir'." >&2
+    echo "   Ensure mix and elixir are fully available before running this script." >&2
+    exit 1
+  fi
+
+  expected_otp_major="${expected_otp%%.*}"
+  if [ "$actual_elixir" != "$expected_elixir" ] || (
+    [ "$actual_otp" != "$expected_otp" ] && [ "$actual_otp" != "$expected_otp_major" ]
+  ); then
+    echo "❌ Matrix slot ${version} requires Elixir ${expected_elixir} + OTP ${expected_otp}, but local runtime is Elixir ${actual_elixir}, OTP ${actual_otp}." >&2
+    echo "   Switch to the expected toolchain before running: ./scripts/ci_local.sh --matrix ${version}" >&2
+    exit 1
+  fi
+
+  echo "  -> runtime ok: Elixir ${actual_elixir}, OTP ${actual_otp}"
+}
+
 dry_run_checks() {
   local version="$1"
   local entry="$2"
@@ -232,6 +266,7 @@ run_matrix() {
   IFS='|' read -r version elixir otp checks_csv <<< "$entry"
 
   echo "==> Running matrix slot ${version} (elixir ${elixir}, otp ${otp})"
+  ensure_toolchain "$version" "$elixir" "$otp"
 
   IFS=,
   set -- $checks_csv
