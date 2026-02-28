@@ -230,21 +230,21 @@ defmodule JsonLiveviewRender.Permissions do
   defp inherited_role_keys(_current_user), do: MapSet.new()
 
   defp declared_roles(current_user) when is_map(current_user) do
+    current_roles = Map.get(current_user, :roles)
+    current_role = Map.get(current_user, :role)
+
+    resolved_roles = if is_nil(current_roles), do: Map.get(current_user, "roles"), else: current_roles
+    resolved_role = if is_nil(current_role), do: Map.get(current_user, "role"), else: current_role
+
     cond do
-      is_list(Map.get(current_user, "roles")) ->
-        Map.get(current_user, "roles")
+      is_list(resolved_roles) ->
+        resolved_roles
 
-      is_binary(Map.get(current_user, "roles")) || is_atom(Map.get(current_user, "roles")) ->
-        [Map.get(current_user, "roles")]
+      is_binary(resolved_roles) || (is_atom(resolved_roles) && not is_nil(resolved_roles)) ->
+        [resolved_roles]
 
-      is_list(Map.get(current_user, :roles)) ->
-        Map.get(current_user, :roles)
-
-      is_binary(Map.get(current_user, :roles)) || is_atom(Map.get(current_user, :roles)) ->
-        [Map.get(current_user, :roles)]
-
-      is_binary(Map.get(current_user, :role)) || is_atom(Map.get(current_user, :role)) ->
-        [Map.get(current_user, :role)]
+      is_binary(resolved_role) || (is_atom(resolved_role) && not is_nil(resolved_role)) ->
+        [resolved_role]
 
       true ->
         []
@@ -252,6 +252,7 @@ defmodule JsonLiveviewRender.Permissions do
   end
 
   defp declared_roles(_current_user), do: []
+
 
   defp inheritance_graph(current_user) do
     case Map.get(current_user, :role_inheritance) || Map.get(current_user, "role_inheritance") do
