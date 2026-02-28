@@ -10,6 +10,10 @@ defmodule JsonLiveviewRender.StreamTest do
     def component(_type), do: raise("spec validation should not run for incomplete stream")
   end
 
+  defmodule ValidationNeverCatalog do
+    def component(_type), do: raise("spec validation should not run for duplicate elements")
+  end
+
   test "new/0 initializes empty stream state" do
     assert Stream.new() == %{root: nil, elements: %{}, complete?: false}
   end
@@ -103,6 +107,24 @@ defmodule JsonLiveviewRender.StreamTest do
              )
 
     assert Map.keys(stream.elements) == ["metric_1"]
+  end
+
+  test "duplicate element events short-circuit before validation regardless of payload shape" do
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
+
+    {:ok, stream} =
+      Stream.ingest(
+        stream,
+        {:element, "metric_1", %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
+        Catalog
+      )
+
+    assert {:error, {:element_already_exists, "metric_1"}} =
+             Stream.ingest(
+               stream,
+               {:element, "metric_1", %{"type" => "metric", "props" => %{}}},
+               ValidationNeverCatalog
+             )
   end
 
   test "ingest_many/3 processes event batches" do
