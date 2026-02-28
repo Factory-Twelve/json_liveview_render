@@ -401,6 +401,26 @@ make ci-local         # cheapest matrix slot
 make ci-local-full    # full matrix parity
 ```
 
+## Release Dry-Run Check
+
+Use the script below for local publish-readiness verification:
+
+```bash
+./scripts/hex_release_dry_run.sh
+```
+
+The script performs all of the following from the repo root:
+
+- `mix deps.get`
+- `mix ci`
+- `mix hex.build`
+- `mix hex.publish --dry-run`
+
+Before running, ensure `mix` is available and a Hex auth credential source is configured:
+
+- `HEX_API_KEY` is set, or
+- local Hex config exists (for example `~/.hex/hex.config`).
+
 ## Learnings
 
 - See [LEARNINGS.md](./LEARNINGS.md) for implementation learnings and follow-up risks.
