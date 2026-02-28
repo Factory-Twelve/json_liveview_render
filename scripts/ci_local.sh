@@ -180,51 +180,49 @@ parse_matrix_arg() {
 
 run_check() {
   local matrix="$1"
-  local check_name="$2"
-  local command="$3"
+  local elixir="$2"
+  local otp="$3"
+  local check_name="$4"
+  local command="$5"
+  local runtime
+  local actual_elixir
+  local actual_otp
+  local runtime_otp_major
 
   echo "  -> ${check_name}: ${command}"
-  if ! eval "$command"; then
-    echo "❌ CI check '${check_name}' failed in matrix slot ${matrix}." >&2
-    echo "   Plan file: ${PLAN_FILE}" >&2
-    echo "   Command: ${command}" >&2
-    echo "   Re-run with: ./scripts/ci_local.sh --matrix ${matrix}" >&2
-    exit 1
-  fi
-}
 
-ensure_toolchain() {
-  local version="$1"
-  local expected_elixir="$2"
-  local expected_otp="$3"
+  if command -v elixir >/dev/null 2>&1; then
+    runtime="$(elixir -e 'IO.puts(System.version())' 2>/dev/null || true)|$(elixir -e 'IO.puts(:erlang.system_info(:otp_release))' 2>/dev/null || true)"
+    actual_elixir="${runtime%%|*}"
+    actual_otp="${runtime##*|}"
+    runtime_otp_major="${otp%%.*}"
 
-  local actual_elixir actual_otp expected_otp_major
-
-  if ! command -v elixir >/dev/null 2>&1; then
-    echo "❌ Matrix slot ${version} requires Elixir ${expected_elixir} and OTP ${expected_otp}, but 'elixir' is not installed or not on PATH." >&2
-    echo "   Configure your local toolchain (asdf/mise/kerl) before running CI parity locally." >&2
-    exit 1
-  fi
-
-  actual_elixir="$(elixir -e 'IO.puts(System.version())' 2>/dev/null || true)"
-  actual_otp="$(elixir -e 'IO.puts(:erlang.system_info(:otp_release))' 2>/dev/null || true)"
-
-  if [ -z "$actual_elixir" ] || [ -z "$actual_otp" ]; then
-    echo "❌ Unable to read local Elixir/OTP versions from 'elixir'." >&2
-    echo "   Ensure mix and elixir are fully available before running this script." >&2
-    exit 1
+    if [ "$actual_elixir" = "$elixir" ] && ([ "$actual_otp" = "$otp" ] || [ "$actual_otp" = "$runtime_otp_major" ]); then
+      echo "  -> runtime ok: Elixir ${actual_elixir}, OTP ${actual_otp}"
+      if eval "$command"; then
+        return 0
+      else
+        echo "❌ CI check '${check_name}' failed in matrix slot ${matrix}." >&2
+        echo "   Plan file: ${PLAN_FILE}" >&2
+        echo "   Command: ${command}" >&2
+        echo "   Re-run with: ./scripts/ci_local.sh --matrix ${matrix}" >&2
+        exit 1
+      fi
+    fi
   fi
 
-  expected_otp_major="${expected_otp%%.*}"
-  if [ "$actual_elixir" != "$expected_elixir" ] || (
-    [ "$actual_otp" != "$expected_otp" ] && [ "$actual_otp" != "$expected_otp_major" ]
-  ); then
-    echo "❌ Matrix slot ${version} requires Elixir ${expected_elixir} + OTP ${expected_otp}, but local runtime is Elixir ${actual_elixir}, OTP ${actual_otp}." >&2
-    echo "   Switch to the expected toolchain before running: ./scripts/ci_local.sh --matrix ${version}" >&2
-    exit 1
+  if command -v asdf >/dev/null 2>&1; then
+    if asdf shell erlang "$otp" asdf shell elixir "$elixir" bash -lc "$command"; then
+      echo "  -> runtime ok via asdf: Elixir ${elixir}, OTP ${otp} for slot ${matrix}"
+      return 0
+    fi
   fi
 
-  echo "  -> runtime ok: Elixir ${actual_elixir}, OTP ${actual_otp}"
+  echo "❌ Matrix slot ${matrix} requires Elixir ${elixir} + OTP ${otp}, but local runtime does not match." >&2
+  echo "   Configure your local toolchain manager to select the required runtime, or run each slot separately." >&2
+  echo "   Re-run with: ./scripts/ci_local.sh --matrix ${matrix}" >&2
+  echo "   Tip: 'asdf shell erlang ${otp}' then 'asdf shell elixir ${elixir}' can be used to switch in-band, if supported." >&2
+  exit 1
 }
 
 dry_run_checks() {
@@ -266,7 +264,6 @@ run_matrix() {
   IFS='|' read -r version elixir otp checks_csv <<< "$entry"
 
   echo "==> Running matrix slot ${version} (elixir ${elixir}, otp ${otp})"
-  ensure_toolchain "$version" "$elixir" "$otp"
 
   IFS=,
   set -- $checks_csv
@@ -281,7 +278,7 @@ run_matrix() {
       echo "Unknown check '${check}' for matrix slot ${version} in $PLAN_FILE" >&2
       exit 1
     }
-    run_check "$version" "$check" "$command"
+    run_check "$version" "$elixir" "$otp" "$check" "$command"
   done
 }
 
