@@ -84,15 +84,15 @@ defmodule JsonLiveviewRender.StreamTest do
   end
 
   test "duplicate element events return explicit error without mutation" do
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
+
     {:ok, stream} =
       Stream.ingest(
-        Stream.new(),
+        stream,
         {:element, "metric_1",
          %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
         Catalog
       )
-
-    assert {:ok, stream} = Stream.ingest(stream, {:root, "metric_1"}, Catalog)
 
     assert {:error, {:element_already_exists, "metric_1"}} =
              Stream.ingest(
