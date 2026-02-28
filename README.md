@@ -231,6 +231,17 @@ spec = JsonLiveviewRender.Stream.to_spec(stream)
 {:ok, _validated_spec} = JsonLiveviewRender.Stream.finalize(stream, MyApp.UICatalog)
 ```
 
+The stream contract is:
+
+- `{:root, id}`: establish the stream root
+  - repeated `{:root, same_id}` is idempotent
+  - repeated `{:root, different_id}` returns `{:error, {:root_already_set, ...}}`
+- `{:element, id, element}`: add one element by id (only after a root is known)
+  - repeated ids return `{:error, {:element_already_exists, ...}}`
+- `{:finalize}`: mark stream completion
+  - safe to call multiple times
+- malformed sequencing returns explicit `{:error, reason}` and does not mutate stream state
+
 Provider adapter examples convert provider payloads into structured stream events:
 
 ```elixir
@@ -255,6 +266,34 @@ The following adapter modules are shipped for experimentation and reference only
 - `JsonLiveviewRender.Stream.Adapter.Anthropic`
 
 Streaming transport normalization is deferred to companion-package implementations for production integrations.
+
+### Adapter normalization reference patterns
+
+Use the adapter modules to normalize provider payloads before calling `JsonLiveviewRender.Stream.ingest/4`.
+
+- `:ignore` means the payload is unrelated noise and should be skipped.
+- `{:error, {:invalid_adapter_event, reason}}` means the payload matched a supported provider tool surface but is malformed.
+
+```elixir
+case JsonLiveviewRender.Stream.Adapter.OpenAI.normalize_event(payload) do
+  {:ok, event} ->
+    JsonLiveviewRender.Stream.ingest(stream, event, Catalog)
+
+  :ignore ->
+    {:ok, stream}
+
+  {:error, {:invalid_adapter_event, reason}} ->
+    {:error, {:invalid_provider_payload, reason}}
+end
+```
+
+Malformed payload behavior is intentionally strict and deterministic:
+
+- missing required fields for a supported schema returns an explicit error
+- unexpected argument shape returns an explicit schema error
+- unrelated payloads remain noise and are ignored
+
+These adapters are companion-surface references and should not be treated as in-scope v0.3 core transport behavior.
 
 Use these modules only as reference patterns for provider-specific adapters.
 

@@ -55,13 +55,50 @@ defmodule JsonLiveviewRender.StreamTest do
   end
 
   test "finalize marks stream complete" do
-    {:ok, stream} = Stream.ingest(Stream.new(), {:finalize}, Catalog)
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "page"}, Catalog)
+    {:ok, stream} = Stream.ingest(stream, {:finalize}, Catalog)
     assert stream.complete?
+  end
+
+  test "finalize without root is rejected" do
+    assert {:error, :root_not_set} = Stream.ingest(Stream.new(), {:finalize}, Catalog)
+  end
+
+  test "ingest rejects elements before root" do
+    assert {:error, :root_not_set} =
+             Stream.ingest(
+               Stream.new(),
+               {:element, "metric_1",
+                %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
+               Catalog
+             )
   end
 
   test "invalid event tuple returns deterministic error" do
     assert {:error, {:invalid_stream_event, {:bogus, :event}}} =
              Stream.ingest(Stream.new(), {:bogus, :event}, Catalog)
+  end
+
+  test "duplicate element events return explicit error without mutation" do
+    {:ok, stream} =
+      Stream.ingest(
+        Stream.new(),
+        {:element, "metric_1",
+         %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
+        Catalog
+      )
+
+    assert {:ok, stream} = Stream.ingest(stream, {:root, "metric_1"}, Catalog)
+
+    assert {:error, {:element_already_exists, "metric_1"}} =
+             Stream.ingest(
+               stream,
+               {:element, "metric_1",
+                %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
+               Catalog
+             )
+
+    assert Map.keys(stream.elements) == ["metric_1"]
   end
 
   test "ingest_many/3 processes event batches" do
@@ -112,6 +149,25 @@ defmodule JsonLiveviewRender.StreamTest do
       )
 
     assert {:ok, %{"root" => "page"}} = Stream.finalize(stream, Catalog)
+  end
+
+  test "finalize/3 with require_complete: false validates partial stream" do
+    {:ok, stream} =
+      Stream.ingest_many(
+        Stream.new(),
+        [
+          {:root, "page"},
+          {:element, "page", %{"type" => "row", "props" => %{}, "children" => ["metric_1"]}},
+          {:element, "metric_1",
+           %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}}
+        ],
+        Catalog
+      )
+
+    assert {:ok, %{"root" => "page", "elements" => elements}} =
+             Stream.finalize(stream, Catalog, require_complete: false)
+
+    assert Map.has_key?(elements, "metric_1")
   end
 
   test "finalize/3 requires finalize event by default" do

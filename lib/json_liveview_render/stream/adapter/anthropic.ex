@@ -23,21 +23,31 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
   @tool_name "json_liveview_render_event"
 
   @impl true
-  def normalize_event(%{"type" => "tool_use", "name" => @tool_name, "input" => input})
-      when is_map(input) do
-    map_input(input)
-  end
+  def normalize_event(payload) when is_map(payload) do
+    payload = normalize_payload_keys(payload)
 
-  def normalize_event(%{
+    case payload do
+      %{"type" => "tool_use", "name" => @tool_name, "input" => input} ->
+        map_input(input)
+
+      %{"type" => "tool_use", "name" => @tool_name} ->
+        {:error, {:invalid_adapter_event, payload}}
+
+      %{
         "type" => "content_block_stop",
-        "content_block" => %{
-          "type" => "tool_use",
-          "name" => @tool_name,
-          "input" => input
-        }
-      })
-      when is_map(input) do
-    map_input(input)
+        "content_block" => %{"type" => "tool_use", "name" => @tool_name, "input" => input}
+      } ->
+        map_input(input)
+
+      %{
+        "type" => "content_block_stop",
+        "content_block" => %{"type" => "tool_use", "name" => @tool_name}
+      } ->
+        {:error, {:invalid_adapter_event, payload}}
+
+      _ ->
+        :ignore
+    end
   end
 
   def normalize_event(_payload), do: :ignore
@@ -50,5 +60,18 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
        do: {:ok, {:element, id, element}}
 
   defp map_input(%{"event" => "finalize"}), do: {:ok, {:finalize}}
+
+  defp map_input(payload) when is_map(payload) do
+    {:error, {:invalid_adapter_event, normalize_payload_keys(payload)}}
+  end
+
   defp map_input(payload), do: {:error, {:invalid_adapter_event, payload}}
+
+  defp normalize_payload_keys(map) when is_map(map),
+    do: Map.new(map, fn {k, v} -> {to_string(k), normalize_payload_keys(v)} end)
+
+  defp normalize_payload_keys(list) when is_list(list),
+    do: Enum.map(list, &normalize_payload_keys/1)
+
+  defp normalize_payload_keys(value), do: value
 end

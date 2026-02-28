@@ -23,24 +23,46 @@ defmodule JsonLiveviewRender.Stream.Adapter.OpenAI do
   @tool_name "json_liveview_render_event"
 
   @impl true
-  def normalize_event(%{
-        "type" => "response.output_item.done",
-        "item" => %{"type" => "function_call", "name" => @tool_name, "arguments" => arguments}
-      }) do
-    arguments |> decode_arguments() |> map_arguments()
-  end
+  def normalize_event(payload) when is_map(payload) do
+    payload = normalize_payload_keys(payload)
 
-  def normalize_event(%{
+    case payload do
+      %{"type" => "response.output_item.done", "item" => item} ->
+        item = normalize_payload_keys(item)
+
+        case item do
+          %{"type" => "function_call", "name" => @tool_name, "arguments" => arguments} ->
+            decode_arguments(arguments) |> map_arguments()
+
+          %{"type" => "function_call", "name" => @tool_name} ->
+            {:error, {:invalid_adapter_event, payload}}
+
+          %{"type" => "function_call"} ->
+            :ignore
+
+          _ ->
+            :ignore
+        end
+
+      %{
         "type" => "response.function_call_arguments.done",
         "name" => @tool_name,
         "arguments" => arguments
-      }) do
-    arguments |> decode_arguments() |> map_arguments()
+      } ->
+        decode_arguments(arguments) |> map_arguments()
+
+      %{"type" => "response.function_call_arguments.done", "name" => @tool_name} ->
+        {:error, {:invalid_adapter_event, payload}}
+
+      _ ->
+        :ignore
+    end
   end
 
   def normalize_event(_payload), do: :ignore
 
-  defp decode_arguments(arguments) when is_map(arguments), do: {:ok, arguments}
+  defp decode_arguments(arguments) when is_map(arguments),
+    do: {:ok, normalize_payload_keys(arguments)}
 
   defp decode_arguments(arguments) when is_binary(arguments) do
     case Jason.decode(arguments) do
@@ -64,4 +86,12 @@ defmodule JsonLiveviewRender.Stream.Adapter.OpenAI do
   defp map_arguments({:ok, %{"event" => "finalize"}}), do: {:ok, {:finalize}}
 
   defp map_arguments({:ok, payload}), do: {:error, {:invalid_adapter_event, payload}}
+
+  defp normalize_payload_keys(map) when is_map(map),
+    do: Map.new(map, fn {k, v} -> {to_string(k), normalize_payload_keys(v)} end)
+
+  defp normalize_payload_keys(list) when is_list(list),
+    do: Enum.map(list, &normalize_payload_keys/1)
+
+  defp normalize_payload_keys(value), do: value
 end
