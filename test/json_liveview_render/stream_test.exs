@@ -52,7 +52,7 @@ defmodule JsonLiveviewRender.StreamTest do
   end
 
   test "ingest rejects invalid element events" do
-    stream = Stream.new()
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
 
     assert {:error, {:missing_required_prop, _}} =
              Stream.ingest(
@@ -228,15 +228,17 @@ defmodule JsonLiveviewRender.StreamTest do
   end
 
   test "ingest/4 supports permissive strict option for unknown props" do
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
+
     strict_event =
       {:element, "metric_1",
        %{"type" => "metric", "props" => %{"label" => "A", "value" => "1", "x" => true}}}
 
-    assert {:error, {:unknown_prop, _}} = Stream.ingest(Stream.new(), strict_event, Catalog)
+    assert {:error, {:unknown_prop, _}} = Stream.ingest(stream, strict_event, Catalog)
 
     assert capture_log(fn ->
              assert {:ok, stream} =
-                      Stream.ingest(Stream.new(), strict_event, Catalog, strict: false)
+                      Stream.ingest(stream, strict_event, Catalog, strict: false)
 
              assert Map.has_key?(stream.elements, "metric_1")
            end) =~ "ignoring unknown prop"

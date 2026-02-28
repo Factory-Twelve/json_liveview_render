@@ -65,7 +65,7 @@ defmodule JsonLiveviewRender.Stream do
     do: {:error, :stream_already_finalized}
 
   defp process_transition(
-         %{root: nil} = stream,
+         %{root: nil},
          {:element, id, element},
          _catalog,
          _opts
@@ -110,7 +110,7 @@ defmodule JsonLiveviewRender.Stream do
     end
   end
 
-  defp process_transition(%{root: nil} = stream, {:finalize}, _catalog, _opts),
+  defp process_transition(%{root: nil}, {:finalize}, _catalog, _opts),
     do: {:error, :root_not_set}
 
   defp process_transition(stream, {:finalize}, _catalog, _opts),
