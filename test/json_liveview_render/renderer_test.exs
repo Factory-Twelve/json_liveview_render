@@ -400,8 +400,11 @@ defmodule JsonLiveviewRender.RendererTest do
     third_pos = elem(third_match, 0)
 
     # Check relative order is preserved
-    assert first_pos < second_pos, "First should appear before Second (#{first_pos} < #{second_pos})"
-    assert second_pos < third_pos, "Second should appear before Third (#{second_pos} < #{third_pos})"
+    assert first_pos < second_pos,
+           "First should appear before Second (#{first_pos} < #{second_pos})"
+
+    assert second_pos < third_pos,
+           "Second should appear before Third (#{second_pos} < #{third_pos})"
 
     # Verify admin content is filtered out
     refute String.contains?(html, "Admin Panel")
@@ -413,7 +416,7 @@ defmodule JsonLiveviewRender.RendererTest do
       "elements" => %{
         "page_1" => %{
           "type" => "section",
-          "props" => %{},
+          "props" => %{"title" => "Page"},
           "children" => ["list_1"]
         },
         "list_1" => %{
@@ -469,8 +472,8 @@ defmodule JsonLiveviewRender.RendererTest do
       "elements" => %{
         "metric_1" => %{
           "type" => "metric",
-          "props" => %{"label" => "Revenue", "value" => "$100"}
-          # Note: no "children" field defined
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
         }
       }
     }

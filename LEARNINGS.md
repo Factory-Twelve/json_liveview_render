@@ -40,3 +40,9 @@ Updated: 2026-02-25
 - Add benchmark suite for validation/render hot paths.
 - Add optional validator integration with a full JSON Schema engine.
 - Implement v0.2+ streaming accumulator and provider adapter examples.
+
+## 2026-02-28
+
+### FAC-53: Implement child slot rendering ergonomics for renderer
+- Tests: passed
+- PR: https://github.com/Factory-Twelve/json_liveview_render/pull/4
