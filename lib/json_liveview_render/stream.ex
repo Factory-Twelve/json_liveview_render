@@ -84,16 +84,16 @@ defmodule JsonLiveviewRender.Stream do
     if Map.has_key?(elements, id) do
       {:error, {:element_already_exists, id}}
     else
-    strict? = Keyword.get(opts, :strict, true)
-    normalized = normalize_stream_element(element)
+      strict? = Keyword.get(opts, :strict, true)
+      normalized = normalize_stream_element(element)
 
-    case Spec.validate_element(id, normalized, catalog, strict: strict?) do
-      :ok ->
-        {:ok, put_in(stream, [:elements, id], normalized)}
+      case Spec.validate_element(id, normalized, catalog, strict: strict?) do
+        :ok ->
+          {:ok, put_in(stream, [:elements, id], normalized)}
 
-      {:error, reason} ->
-        {:error, reason}
-    end
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 

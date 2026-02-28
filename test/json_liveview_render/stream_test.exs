@@ -115,7 +115,8 @@ defmodule JsonLiveviewRender.StreamTest do
     {:ok, stream} =
       Stream.ingest(
         stream,
-        {:element, "metric_1", %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
+        {:element, "metric_1",
+         %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
         Catalog
       )
 
