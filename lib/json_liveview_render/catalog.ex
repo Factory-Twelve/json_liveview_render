@@ -149,7 +149,7 @@ defmodule JsonLiveviewRender.Catalog do
   end
 
   @doc false
-  def __set_permission__(module, role) when is_atom(role) do
+  def __set_permission__(module, role) do
     component =
       module
       |> __fetch_current_component!()

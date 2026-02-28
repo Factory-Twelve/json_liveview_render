@@ -1,7 +1,7 @@
 defmodule JsonLiveviewRender.Authorizer do
   @moduledoc "Behavior for app-provided authorization used during rendering."
 
-  @callback allowed?(current_user :: term(), required_role :: atom()) :: boolean()
+  @callback allowed?(current_user :: term(), required_role :: term()) :: boolean()
 end
 
 defmodule JsonLiveviewRender.Authorizer.AllowAll do

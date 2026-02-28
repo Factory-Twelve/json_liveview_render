@@ -132,6 +132,59 @@ Enable optional runtime type checks for resolved binding values:
 />
 ```
 
+## Permission Policy Examples
+
+Configure component permissions in the catalog with `permission/1`:
+
+- atom: legacy single-role policy
+- list: shorthand for `any_of` semantics
+- map: explicit composition with `:any_of`, `:all_of`, and optional `:deny`
+
+```elixir
+defmodule MyApp.UICatalog do
+  use JsonLiveviewRender.Catalog
+
+  component :admin_metrics do
+    description "Admin-only view"
+    prop :label, :string, required: true
+    permission :admin
+  end
+
+  component :safe_card do
+    description "Visible to members or admins"
+    prop :title, :string, required: true
+    permission [:member, :admin]
+  end
+
+  component :super_card do
+    description "Requires multiple roles"
+    prop :title, :string, required: true
+    permission %{all_of: [:admin, :member]}
+  end
+
+  component :risky_card do
+    description "Allowed except suspended users"
+    prop :title, :string, required: true
+    permission %{any_of: [:member, :admin], deny: [:suspended]}
+  end
+end
+```
+
+`current_user` can define effective roles and inheritance:
+
+```elixir
+current_user = %{
+  roles: :admin,
+  role_inheritance: %{admin: [:member]}
+}
+```
+
+Current defaults for composition:
+
+- list / `%{any_of: [...]}` uses permissive any-of logic
+- `%{all_of: [...]}` requires all entries
+- `:deny` is always evaluated before allow logic
+
 PubSub re-render pattern (documented; app-owned):
 
 ```elixir
