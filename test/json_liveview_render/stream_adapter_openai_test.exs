@@ -54,7 +54,7 @@ defmodule JsonLiveviewRender.Stream.Adapter.OpenAITest do
       "item" => %{"type" => "function_call", "name" => "json_liveview_render_event"}
     }
 
-    assert {:error, {:invalid_adapter_event, payload}} = OpenAI.normalize_event(payload)
+    assert {:error, {:invalid_adapter_event, _payload}} = OpenAI.normalize_event(payload)
   end
 
   test "returns explicit error for malformed function_call_arguments payload" do
@@ -63,7 +63,7 @@ defmodule JsonLiveviewRender.Stream.Adapter.OpenAITest do
       "name" => "json_liveview_render_event"
     }
 
-    assert {:error, {:invalid_adapter_event, payload}} = OpenAI.normalize_event(payload)
+    assert {:error, {:invalid_adapter_event, _payload}} = OpenAI.normalize_event(payload)
   end
 
   test "returns explicit error when arguments decode to non-map json" do

@@ -64,14 +64,17 @@ defmodule JsonLiveviewRender.StreamTest do
     assert {:error, :root_not_set} = Stream.ingest(Stream.new(), {:finalize}, Catalog)
   end
 
-  test "ingest rejects elements before root" do
-    assert {:error, :root_not_set} =
+  test "ingest accepts elements before root" do
+    assert {:ok, stream} =
              Stream.ingest(
                Stream.new(),
                {:element, "metric_1",
                 %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
                Catalog
              )
+
+    assert stream.root == nil
+    assert Map.has_key?(stream.elements, "metric_1")
   end
 
   test "invalid event tuple returns deterministic error" do

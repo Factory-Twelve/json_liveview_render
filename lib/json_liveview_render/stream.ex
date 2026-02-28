@@ -64,9 +64,6 @@ defmodule JsonLiveviewRender.Stream do
   defp process_transition(%{complete?: true}, _event, _catalog, _opts),
     do: {:error, :stream_already_finalized}
 
-  defp process_transition(%{root: nil}, {:element, _id, _element}, _catalog, _opts),
-    do: {:error, :root_not_set}
-
   defp process_transition(
          %{elements: elements} = stream,
          {:element, id, element},
@@ -74,16 +71,19 @@ defmodule JsonLiveviewRender.Stream do
          opts
        )
        when is_binary(id) and is_map(element) do
-    if Map.has_key?(elements, id) do
-      {:error, {:element_already_exists, id}}
-    else
-      strict? = Keyword.get(opts, :strict, true)
-      normalized = normalize_stream_element(element)
+    strict? = Keyword.get(opts, :strict, true)
+    normalized = normalize_stream_element(element)
 
-      case Spec.validate_element(id, normalized, catalog, strict: strict?) do
-        :ok -> {:ok, put_in(stream, [:elements, id], normalized)}
-        {:error, reason} -> {:error, reason}
-      end
+    case Spec.validate_element(id, normalized, catalog, strict: strict?) do
+      :ok ->
+        if Map.has_key?(elements, id) do
+          {:error, {:element_already_exists, id}}
+        else
+          {:ok, put_in(stream, [:elements, id], normalized)}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

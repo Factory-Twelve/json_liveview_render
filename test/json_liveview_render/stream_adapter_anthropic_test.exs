@@ -49,7 +49,7 @@ defmodule JsonLiveviewRender.Stream.Adapter.AnthropicTest do
       "name" => "json_liveview_render_event"
     }
 
-    assert {:error, {:invalid_adapter_event, payload}} = Anthropic.normalize_event(payload)
+    assert {:error, {:invalid_adapter_event, _payload}} = Anthropic.normalize_event(payload)
   end
 
   test "returns explicit error for content_block tool_use schema mismatch" do
@@ -61,6 +61,6 @@ defmodule JsonLiveviewRender.Stream.Adapter.AnthropicTest do
       }
     }
 
-    assert {:error, {:invalid_adapter_event, payload}} = Anthropic.normalize_event(payload)
+    assert {:error, {:invalid_adapter_event, _payload}} = Anthropic.normalize_event(payload)
   end
 end
