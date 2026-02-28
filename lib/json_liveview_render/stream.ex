@@ -65,6 +65,16 @@ defmodule JsonLiveviewRender.Stream do
     do: {:error, :stream_already_finalized}
 
   defp process_transition(
+         %{root: nil} = stream,
+         {:element, id, element},
+         _catalog,
+         _opts
+       )
+       when is_binary(id) and is_map(element) do
+    {:error, :root_not_set}
+  end
+
+  defp process_transition(
          %{elements: elements} = stream,
          {:element, id, element},
          catalog,
