@@ -7,11 +7,42 @@ defmodule JsonLiveviewRender.Stream do
   - Stability: v0.3 candidate (locked for this release cycle)
   - In v0.2 contract: Not required
   - Compatibility: Optional opt-in streaming surface for incremental rendering workflows
+
+  ## Stream contract
+
+  Streaming events use a three-state transition model over the same accumulator:
+
+  1. `{:root, id}` establishes the root element id (idempotent when the same id is repeated).
+  2. `{:element, id, element}` adds a new element after a root is known.
+  3. `{:finalize}` marks the stream as complete.
+
+  Allowed transitions and malformed-sequence handling:
+
+  - `{:root, id}`:
+    - accepted when no root is set
+    - accepted again when the same root is repeated (idempotent)
+    - rejected when a different root is set: `{:error, {:root_already_set, existing, incoming}}`
+  - `{:element, id, element}`:
+    - accepted when root has been established and the id is new
+    - rejected when root is missing: `{:error, :root_not_set}`
+    - rejected when element id already exists: `{:error, {:element_already_exists, id}}`
+  - `{:finalize}`:
+    - accepted after a root has been established
+    - accepted again when already complete (`{:ok, stream}`).
+
+  Invalid event shapes return `{:error, {:invalid_stream_event, event}}`.
+  Once complete, all non-`:finalize` events return `{:error, :stream_already_finalized}`.
   """
 
   alias JsonLiveviewRender.Spec
 
   @type event :: {:root, String.t()} | {:element, String.t(), map()} | {:finalize}
+  @type transition_error ::
+          :root_not_set
+          | :stream_already_finalized
+          | {:root_already_set, String.t(), String.t()}
+          | {:element_already_exists, String.t()}
+          | {:invalid_stream_event, term()}
   @type t :: %{
           root: String.t() | nil,
           elements: %{optional(String.t()) => map()},
@@ -25,32 +56,68 @@ defmodule JsonLiveviewRender.Stream do
   def ingest(stream, event, catalog), do: ingest(stream, event, catalog, [])
 
   @spec ingest(t(), event(), module(), keyword()) :: {:ok, t()} | {:error, term()}
-  def ingest(%{complete?: true} = stream, {:finalize}, _catalog, _opts), do: {:ok, stream}
-  def ingest(%{complete?: true}, _event, _catalog, _opts), do: {:error, :stream_already_finalized}
+  def ingest(stream, event, catalog, opts), do: process_transition(stream, event, catalog, opts)
 
-  def ingest(%{root: nil} = stream, {:root, id}, _catalog, _opts) when is_binary(id),
-    do: {:ok, %{stream | root: id}}
-
-  def ingest(%{root: id} = stream, {:root, id}, _catalog, _opts) when is_binary(id),
+  defp process_transition(%{complete?: true} = stream, {:finalize}, _catalog, _opts),
     do: {:ok, stream}
 
-  def ingest(%{root: existing}, {:root, incoming}, _catalog, _opts) when is_binary(incoming),
-    do: {:error, {:root_already_set, existing, incoming}}
+  defp process_transition(%{complete?: true}, _event, _catalog, _opts),
+    do: {:error, :stream_already_finalized}
 
-  def ingest(stream, {:element, id, element}, catalog, opts)
-      when is_binary(id) and is_map(element) do
-    strict? = Keyword.get(opts, :strict, true)
-    normalized = normalize_stream_element(element)
+  defp process_transition(
+         %{root: nil},
+         {:element, id, element},
+         _catalog,
+         _opts
+       )
+       when is_binary(id) and is_map(element) do
+    {:error, :root_not_set}
+  end
 
-    case Spec.validate_element(id, normalized, catalog, strict: strict?) do
-      :ok -> {:ok, put_in(stream, [:elements, id], normalized)}
-      {:error, reason} -> {:error, reason}
+  defp process_transition(
+         %{elements: elements} = stream,
+         {:element, id, element},
+         catalog,
+         opts
+       )
+       when is_binary(id) and is_map(element) do
+    if Map.has_key?(elements, id) do
+      {:error, {:element_already_exists, id}}
+    else
+      strict? = Keyword.get(opts, :strict, true)
+      normalized = normalize_stream_element(element)
+
+      case Spec.validate_element(id, normalized, catalog, strict: strict?) do
+        :ok ->
+          {:ok, put_in(stream, [:elements, id], normalized)}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 
-  def ingest(stream, {:finalize}, _catalog, _opts), do: {:ok, %{stream | complete?: true}}
+  defp process_transition(%{root: nil} = stream, {:root, id}, _catalog, _opts)
+       when is_binary(id),
+       do: {:ok, %{stream | root: id}}
 
-  def ingest(_stream, event, _catalog, _opts), do: {:error, {:invalid_stream_event, event}}
+  defp process_transition(%{root: existing} = stream, {:root, incoming}, _catalog, _opts)
+       when is_binary(incoming) do
+    if existing == incoming do
+      {:ok, stream}
+    else
+      {:error, {:root_already_set, existing, incoming}}
+    end
+  end
+
+  defp process_transition(%{root: nil}, {:finalize}, _catalog, _opts),
+    do: {:error, :root_not_set}
+
+  defp process_transition(stream, {:finalize}, _catalog, _opts),
+    do: {:ok, %{stream | complete?: true}}
+
+  defp process_transition(_stream, event, _catalog, _opts),
+    do: {:error, {:invalid_stream_event, event}}
 
   @spec ingest_many(t(), [event()], module()) :: {:ok, t()} | {:error, term(), t()}
   def ingest_many(stream, events, catalog), do: ingest_many(stream, events, catalog, [])
@@ -78,7 +145,14 @@ defmodule JsonLiveviewRender.Stream do
         {:error, :stream_not_finalized}
 
       true ->
-        case Spec.validate(to_spec(stream), catalog, strict: strict?) do
+        validation_result =
+          if stream.complete? do
+            Spec.validate(to_spec(stream), catalog, strict: strict?)
+          else
+            Spec.validate_partial(to_spec(stream), catalog, strict: strict?)
+          end
+
+        case validation_result do
           {:ok, spec} -> {:ok, spec}
           {:error, reasons} -> {:error, reasons}
         end

@@ -34,4 +34,88 @@ defmodule JsonLiveviewRender.Stream.Adapter.OpenAITest do
   test "ignores unrelated payloads" do
     assert :ignore = OpenAI.normalize_event(%{"type" => "response.output_text.delta"})
   end
+
+  test "ignores unrelated payloads with non-stringable keys" do
+    assert :ignore = OpenAI.normalize_event(%{"type" => "response.output_text.delta", %{} => 1})
+  end
+
+  test "normalizes output_item payload with atom keys" do
+    payload = %{
+      type: "response.output_item.done",
+      item: %{
+        type: "function_call",
+        name: "json_liveview_render_event",
+        arguments: %{"event" => "element", "id" => "metric_1", "element" => %{}}
+      }
+    }
+
+    assert {:ok, {:element, "metric_1", _}} = OpenAI.normalize_event(payload)
+  end
+
+  test "returns explicit error for mismatched output_item schema" do
+    payload = %{
+      "type" => "response.output_item.done",
+      "item" => %{"type" => "function_call", "name" => "json_liveview_render_event"}
+    }
+
+    assert {:error, {:invalid_adapter_event, _payload}} = OpenAI.normalize_event(payload)
+  end
+
+  test "returns explicit error when output_item arguments contain non-stringable keys" do
+    payload = %{
+      "type" => "response.output_item.done",
+      "item" => %{
+        "type" => "function_call",
+        "name" => "json_liveview_render_event",
+        "arguments" => %{"event" => "root", "id" => "page", %{} => "not stringable"}
+      }
+    }
+
+    assert {:error, {:invalid_adapter_event, _payload}} = OpenAI.normalize_event(payload)
+  end
+
+  test "returns explicit error when output_item arguments contain keys that cannot be stringified" do
+    invalid_key = [0xD800]
+
+    payload = %{
+      "type" => "response.output_item.done",
+      "item" => %{
+        "type" => "function_call",
+        "name" => "json_liveview_render_event",
+        "arguments" => %{"event" => "root", "id" => "page", invalid_key => "not stringable"}
+      }
+    }
+
+    assert {:error, {:invalid_adapter_event, _payload}} = OpenAI.normalize_event(payload)
+  end
+
+  test "returns explicit error for malformed function_call_arguments payload" do
+    payload = %{
+      "type" => "response.function_call_arguments.done",
+      "name" => "json_liveview_render_event"
+    }
+
+    assert {:error, {:invalid_adapter_event, _payload}} = OpenAI.normalize_event(payload)
+  end
+
+  test "returns explicit error when arguments decode to non-map json" do
+    payload = %{
+      "type" => "response.function_call_arguments.done",
+      "name" => "json_liveview_render_event",
+      "arguments" => ~s(["event","root"])
+    }
+
+    assert {:error, {:invalid_adapter_event, :arguments_must_decode_to_map}} =
+             OpenAI.normalize_event(payload)
+  end
+
+  test "normalizes event arguments from stringified JSON with atom keys" do
+    payload = %{
+      "type" => "response.function_call_arguments.done",
+      "name" => "json_liveview_render_event",
+      "arguments" => %{"event" => "root", "id" => "page"}
+    }
+
+    assert {:ok, {:root, "page"}} = OpenAI.normalize_event(payload)
+  end
 end

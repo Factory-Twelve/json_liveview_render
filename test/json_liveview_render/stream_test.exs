@@ -6,6 +6,14 @@ defmodule JsonLiveviewRender.StreamTest do
   alias JsonLiveviewRender.Stream
   alias JsonLiveviewRenderTest.Fixtures.Catalog
 
+  defmodule ValidationGuardCatalog do
+    def component(_type), do: raise("spec validation should not run for incomplete stream")
+  end
+
+  defmodule ValidationNeverCatalog do
+    def component(_type), do: raise("spec validation should not run for duplicate elements")
+  end
+
   test "new/0 initializes empty stream state" do
     assert Stream.new() == %{root: nil, elements: %{}, complete?: false}
   end
@@ -44,7 +52,7 @@ defmodule JsonLiveviewRender.StreamTest do
   end
 
   test "ingest rejects invalid element events" do
-    stream = Stream.new()
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
 
     assert {:error, {:missing_required_prop, _}} =
              Stream.ingest(
@@ -55,13 +63,69 @@ defmodule JsonLiveviewRender.StreamTest do
   end
 
   test "finalize marks stream complete" do
-    {:ok, stream} = Stream.ingest(Stream.new(), {:finalize}, Catalog)
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "page"}, Catalog)
+    {:ok, stream} = Stream.ingest(stream, {:finalize}, Catalog)
     assert stream.complete?
+  end
+
+  test "finalize without root is rejected" do
+    assert {:error, :root_not_set} = Stream.ingest(Stream.new(), {:finalize}, Catalog)
+  end
+
+  test "ingest rejects elements before root" do
+    assert {:error, :root_not_set} =
+             Stream.ingest(
+               Stream.new(),
+               {:element, "metric_1",
+                %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
+               Catalog
+             )
   end
 
   test "invalid event tuple returns deterministic error" do
     assert {:error, {:invalid_stream_event, {:bogus, :event}}} =
              Stream.ingest(Stream.new(), {:bogus, :event}, Catalog)
+  end
+
+  test "duplicate element events return explicit error without mutation" do
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
+
+    {:ok, stream} =
+      Stream.ingest(
+        stream,
+        {:element, "metric_1",
+         %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
+        Catalog
+      )
+
+    assert {:error, {:element_already_exists, "metric_1"}} =
+             Stream.ingest(
+               stream,
+               {:element, "metric_1",
+                %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
+               Catalog
+             )
+
+    assert Map.keys(stream.elements) == ["metric_1"]
+  end
+
+  test "duplicate element events short-circuit before validation regardless of payload shape" do
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
+
+    {:ok, stream} =
+      Stream.ingest(
+        stream,
+        {:element, "metric_1",
+         %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}},
+        Catalog
+      )
+
+    assert {:error, {:element_already_exists, "metric_1"}} =
+             Stream.ingest(
+               stream,
+               {:element, "metric_1", %{"type" => "metric", "props" => %{}}},
+               ValidationNeverCatalog
+             )
   end
 
   test "ingest_many/3 processes event batches" do
@@ -114,9 +178,44 @@ defmodule JsonLiveviewRender.StreamTest do
     assert {:ok, %{"root" => "page"}} = Stream.finalize(stream, Catalog)
   end
 
+  test "finalize/3 with require_complete: false validates partial stream" do
+    {:ok, stream} =
+      Stream.ingest_many(
+        Stream.new(),
+        [
+          {:root, "page"},
+          {:element, "page", %{"type" => "row", "props" => %{}, "children" => ["metric_1"]}},
+          {:element, "metric_1",
+           %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}}
+        ],
+        Catalog
+      )
+
+    assert {:ok, %{"root" => "page", "elements" => elements}} =
+             Stream.finalize(stream, Catalog, require_complete: false)
+
+    assert Map.has_key?(elements, "metric_1")
+  end
+
   test "finalize/3 requires finalize event by default" do
     {:ok, stream} = Stream.ingest(Stream.new(), {:root, "page"}, Catalog)
     assert {:error, :stream_not_finalized} = Stream.finalize(stream, Catalog)
+  end
+
+  test "finalize/3 short-circuits before validation when stream incomplete" do
+    {:ok, stream} =
+      Stream.ingest_many(
+        Stream.new(),
+        [
+          {:root, "page"},
+          {:element, "page", %{"type" => "row", "props" => %{}, "children" => ["metric_1"]}},
+          {:element, "metric_1",
+           %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}}
+        ],
+        Catalog
+      )
+
+    assert {:error, :stream_not_finalized} = Stream.finalize(stream, ValidationGuardCatalog)
   end
 
   test "ingest/3 does not allow mutation after finalize" do
@@ -129,15 +228,17 @@ defmodule JsonLiveviewRender.StreamTest do
   end
 
   test "ingest/4 supports permissive strict option for unknown props" do
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
+
     strict_event =
       {:element, "metric_1",
        %{"type" => "metric", "props" => %{"label" => "A", "value" => "1", "x" => true}}}
 
-    assert {:error, {:unknown_prop, _}} = Stream.ingest(Stream.new(), strict_event, Catalog)
+    assert {:error, {:unknown_prop, _}} = Stream.ingest(stream, strict_event, Catalog)
 
     assert capture_log(fn ->
              assert {:ok, stream} =
-                      Stream.ingest(Stream.new(), strict_event, Catalog, strict: false)
+                      Stream.ingest(stream, strict_event, Catalog, strict: false)
 
              assert Map.has_key?(stream.elements, "metric_1")
            end) =~ "ignoring unknown prop"

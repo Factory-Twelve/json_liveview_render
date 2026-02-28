@@ -46,4 +46,16 @@ defmodule JsonLiveviewRender.StreamIntegrationTest do
     assert {:ok, stream} = Stream.ingest_many(Stream.new(), events, Catalog)
     assert {:ok, %{"root" => "page"}} = Stream.finalize(stream, Catalog)
   end
+
+  test "malformed provider payload returns error while unrelated payloads remain ignored" do
+    assert {:error, {:invalid_adapter_event, _}} =
+             OpenAI.normalize_event(%{
+               "type" => "response.function_call_arguments.done",
+               "name" => "json_liveview_render_event"
+             })
+
+    assert :ignore = OpenAI.normalize_event(%{"type" => "response.output_text.delta"})
+
+    assert Stream.to_spec(Stream.new()) == %{"root" => nil, "elements" => %{}}
+  end
 end

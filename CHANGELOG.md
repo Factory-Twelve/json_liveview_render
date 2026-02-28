@@ -32,6 +32,10 @@
   - `JsonLiveviewRender.Stream.Adapter.OpenAI`
   - `JsonLiveviewRender.Stream.Adapter.Anthropic`
 - Added tests for partial rendering, stream finalize behavior, and adapter integration.
+- Stabilized the streaming event contract and adapter normalization for v0.3:
+  - `JsonLiveviewRender.Stream` now enforces explicit transitions for `{:root, id}`, `{:element, id, element}`, and `{:finalize}` with duplicate/out-of-order explicit errors
+  - `JsonLiveviewRender.Stream.finalize/3` and `JsonLiveviewRender.Stream.to_spec/1` now share partial-state behavior via `require_complete: false` support
+  - Adapter reference modules now return explicit errors for malformed provider payloads (including missing fields and schema mismatches) and ignore only unrelated/noise events
 - Added experimental DevTools integration:
   - `JsonLiveviewRender.DevTools` browser inspector component
   - renderer flags `dev_tools` and `dev_tools_open`
