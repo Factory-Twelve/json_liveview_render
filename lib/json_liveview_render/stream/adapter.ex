@@ -84,5 +84,11 @@ defmodule JsonLiveviewRender.Stream.Adapter do
 
   defp stringify_key(key) when is_binary(key), do: {:ok, key}
   defp stringify_key(key) when is_atom(key), do: {:ok, Atom.to_string(key)}
-  defp stringify_key(key), do: {:error, {:invalid_payload_key, key}}
+  defp stringify_key(key) when is_number(key), do: {:ok, to_string(key)}
+
+  defp stringify_key(key) do
+    {:ok, to_string(key)}
+  rescue
+    _ -> {:error, {:invalid_payload_key, key}}
+  end
 end
