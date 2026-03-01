@@ -17,11 +17,11 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
     ci: :boolean,
     format: :string,
     iterations: :integer,
-    metrics_per_column: :integer,
     seed: :integer,
+    suites: :string,
     sections: :integer,
     columns: :integer,
-    suites: :string,
+    metrics_per_column: :integer,
     node_count: :integer,
     depth: :integer,
     branching_factor: :integer

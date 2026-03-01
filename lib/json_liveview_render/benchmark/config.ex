@@ -3,9 +3,6 @@ defmodule JsonLiveviewRender.Benchmark.Config do
 
   @default_iterations 300
   @default_seed 2026_03_01
-  @default_sections 12
-  @default_columns 4
-  @default_metrics_per_column 12
   @legacy_node_count 637
   @default_node_count @legacy_node_count
   @default_depth 6
@@ -96,9 +93,9 @@ defmodule JsonLiveviewRender.Benchmark.Config do
         |> Keyword.put_new(
           :node_count,
           compute_legacy_node_count(
-            Keyword.get(options, :sections, @default_sections),
-            Keyword.get(options, :columns, @default_columns),
-            Keyword.get(options, :metrics_per_column, @default_metrics_per_column)
+            Keyword.get(options, :sections, 12),
+            Keyword.get(options, :columns, 4),
+            Keyword.get(options, :metrics_per_column, 12)
           )
         )
         |> Keyword.delete(:sections)
@@ -128,8 +125,6 @@ defmodule JsonLiveviewRender.Benchmark.Config do
       raise ArgumentError,
             "invalid benchmark shape: node_count #{node_count} exceeds max nodes #{max_nodes} for depth #{depth} and branching_factor #{branching_factor}"
     end
-
-    options
   end
 
   defp build_struct(options) do

@@ -20,7 +20,7 @@ defmodule JsonLiveviewRender.Benchmark.Data do
       spec: spec,
       catalog: JsonLiveviewRender.Benchmark.Catalog,
       registry: JsonLiveviewRender.Benchmark.Registry,
-      render_assigns: render_assigns(spec)
+      render_assigns: render_assigns()
     }
   end
 
@@ -207,9 +207,8 @@ defmodule JsonLiveviewRender.Benchmark.Data do
     1 + branching_factor * max_nodes_possible(depth - 1, branching_factor)
   end
 
-  defp render_assigns(spec) do
+  defp render_assigns do
     [
-      spec: spec,
       catalog: JsonLiveviewRender.Benchmark.Catalog,
       registry: JsonLiveviewRender.Benchmark.Registry,
       current_user: %{role: :member},
