@@ -68,7 +68,13 @@ defmodule JsonLiveviewRender.Benchmark.Config do
     options
   end
 
-  defp build_struct(options), do: struct!(__MODULE__, options)
+  @struct_keys [:iterations, :suites, :seed, :sections, :columns, :metrics_per_column, :format, :ci]
+
+  defp build_struct(options) do
+    options
+    |> Keyword.take(@struct_keys)
+    |> then(&struct!(__MODULE__, &1))
+  end
 
   defp normalize_integer(value) when is_integer(value), do: value
 
