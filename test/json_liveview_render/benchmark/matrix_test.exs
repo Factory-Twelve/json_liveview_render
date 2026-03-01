@@ -37,6 +37,18 @@ defmodule JsonLiveviewRender.Benchmark.MatrixTest do
            ]
   end
 
+  test "matrix case definition order is stable across suite argument order" do
+    combined_case_names =
+      Matrix.case_definitions([:validate, :render])
+      |> Enum.map(& &1.case_name)
+
+    reversed_case_names =
+      Matrix.case_definitions([:render, :validate])
+      |> Enum.map(& &1.case_name)
+
+    assert combined_case_names == reversed_case_names
+  end
+
   test "render seeds stay stable when default matrix includes validate tiers" do
     seed = 111
     render_case_names = MapSet.new(Enum.map(Matrix.case_definitions([:render]), & &1.case_name))
@@ -61,14 +73,14 @@ defmodule JsonLiveviewRender.Benchmark.MatrixTest do
     render_seed_pairs =
       Config.from_options(seed: seed, suites: [:render])
       |> Matrix.configs_for()
-      |> Enum.map(&{&1.case_name, &1.seed})
+      |> Enum.map(&{&1.case_name, &1.seed, &1.suites})
 
     assert render_seed_pairs == [
-             {"depth_4_width_2", 111},
-             {"depth_4_width_4", 112},
-             {"depth_5_width_2", 113},
-             {"depth_5_width_4", 114},
-             {"depth_6_width_4_nodes_1024", 115}
+             {"depth_4_width_2", 111, [:render]},
+             {"depth_4_width_4", 112, [:render]},
+             {"depth_5_width_2", 113, [:render]},
+             {"depth_5_width_4", 114, [:render]},
+             {"depth_6_width_4_nodes_1024", 115, [:render]}
            ]
   end
 
@@ -113,6 +125,16 @@ defmodule JsonLiveviewRender.Benchmark.MatrixTest do
       |> Matrix.configs_for()
       |> Map.new(&{&1.case_name, &1.seed})
 
+    combined_case_names =
+      Config.from_options(seed: seed, suites: [:validate, :render])
+      |> Matrix.configs_for()
+      |> Enum.map(& &1.case_name)
+
+    reversed_case_names =
+      Config.from_options(seed: seed, suites: [:render, :validate])
+      |> Matrix.configs_for()
+      |> Enum.map(& &1.case_name)
+
     assert combined["validate_small_depth_4_width_2_nodes_15"] ==
              validate_only["validate_small_depth_4_width_2_nodes_15"]
 
@@ -129,5 +151,6 @@ defmodule JsonLiveviewRender.Benchmark.MatrixTest do
     assert combined["depth_6_width_4_nodes_1024"] == render_only["depth_6_width_4_nodes_1024"]
 
     assert combined == reversed
+    assert combined_case_names == reversed_case_names
   end
 end

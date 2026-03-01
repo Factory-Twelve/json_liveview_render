@@ -3,6 +3,8 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
 
   alias JsonLiveviewRender.Benchmark.Config
 
+  @suite_order [:validate, :render]
+
   @validate_case_definitions [
     %{
       case_name: "validate_small_depth_4_width_2_nodes_15",
@@ -89,7 +91,7 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
         ]
   def case_definitions(suites) when is_list(suites) do
     suites
-    |> Enum.uniq()
+    |> ordered_suites()
     |> Enum.flat_map(&case_definitions_for_suite/1)
   end
 
@@ -101,7 +103,7 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
   @spec configs_for(Config.t()) :: [Config.t()]
   def configs_for(%Config{} = base_config) do
     base_config.suites
-    |> Enum.uniq()
+    |> ordered_suites()
     |> Enum.flat_map(fn suite ->
       case_definitions_for_suite(suite)
       |> Enum.map(fn case_opts ->
@@ -119,5 +121,12 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
         |> Config.from_options()
       end)
     end)
+  end
+
+  defp ordered_suites(suites) do
+    unique_suites = Enum.uniq(suites)
+
+    @suite_order
+    |> Enum.filter(&(&1 in unique_suites))
   end
 end
