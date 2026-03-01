@@ -7,6 +7,11 @@ defmodule JsonLiveviewRender.Benchmark.Catalog do
     prop(:value, :string, required: true)
   end
 
+  component :section do
+    description("Benchmark section wrapper")
+    prop(:title, :string, required: true)
+  end
+
   component :section_metric_card do
     description("Benchmark section wrapper")
     prop(:title, :string, required: true)
