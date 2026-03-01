@@ -181,14 +181,14 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
       assert Enum.any?(fixes, &String.contains?(&1, "wrapped single child"))
     end
 
-    test "drops non-string-coercible children (e.g. nested maps) instead of crashing" do
+    test "drops non-string-coercible children (e.g. nested maps/tuples) instead of crashing" do
       spec = %{
         "root" => "page",
         "elements" => %{
           "page" => %{
             "type" => "column",
             "props" => %{},
-            "children" => ["metric_1", %{"nested" => "object"}, "metric_2"]
+            "children" => ["metric_1", %{"nested" => "object"}, {:bad, "child"}, "metric_2"]
           },
           "metric_1" => %{
             "type" => "metric",
@@ -206,7 +206,7 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
       {:ok, fixed, fixes} = Spec.auto_fix(spec, Catalog)
 
       assert fixed["elements"]["page"]["children"] == ["metric_1", "metric_2"]
-      assert Enum.any?(fixes, &String.contains?(&1, "dropped non-string child"))
+      assert Enum.count(fixes, &String.contains?(&1, "dropped non-string child")) == 2
     end
   end
 
@@ -297,6 +297,49 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
 
       # The non-string key is stringified via inspect fallback
       assert is_map(fixed["elements"]["m_1"]["props"])
+    end
+
+    test "handles non-stringable element ids without crashing" do
+      malformed_id = %{"nested" => "id"}
+
+      spec = %{
+        "root" => "metric_1",
+        "elements" => %{
+          "metric_1" => %{
+            "type" => "metric",
+            "props" => %{"label" => "Rev", "value" => "$1"},
+            "children" => []
+          },
+          malformed_id => %{
+            "type" => "metric",
+            "props" => %{"label" => "Ghost", "value" => "0"},
+            "children" => []
+          }
+        }
+      }
+
+      {:ok, fixed, _fixes} = Spec.auto_fix(spec, Catalog)
+
+      assert Map.has_key?(fixed["elements"], inspect(malformed_id))
+    end
+
+    test "handles malformed non-map root element during orphan traversal" do
+      spec = %{
+        "root" => "bad_root",
+        "elements" => %{
+          "bad_root" => 123,
+          "orphan_1" => %{
+            "type" => "metric",
+            "props" => %{"label" => "Ghost", "value" => "0"},
+            "children" => []
+          }
+        }
+      }
+
+      {:ok, fixed, fixes} = Spec.auto_fix(spec, Catalog)
+
+      assert fixed["elements"]["bad_root"] == 123
+      assert Enum.any?(fixes, &String.contains?(&1, ~s("orphan_1")))
     end
   end
 

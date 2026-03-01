@@ -35,7 +35,7 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
 
         elements =
           Map.new(elements, fn {id, el} ->
-            {to_string(id), normalize_element_for_fix(el)}
+            {Normalizer.safe_to_string(id), normalize_element_for_fix(el)}
           end)
 
         {fixed_elements, fixes} = fix_elements(elements, catalog)
@@ -94,10 +94,12 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
       c when is_list(c) ->
         {coerced, dropped} =
           Enum.reduce(c, {[], []}, fn item, {acc_ok, acc_dropped} ->
-            if is_binary(item) or is_atom(item) or is_number(item) do
-              {[to_string(item) | acc_ok], acc_dropped}
-            else
-              {acc_ok, [item | acc_dropped]}
+            case normalize_child_id(item) do
+              {:ok, child_id} ->
+                {[child_id | acc_ok], acc_dropped}
+
+              :error ->
+                {acc_ok, [item | acc_dropped]}
             end
           end)
 
@@ -110,6 +112,20 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
 
       _ ->
         {[], []}
+    end
+  end
+
+  defp normalize_child_id(item) when is_binary(item), do: {:ok, item}
+
+  defp normalize_child_id(item) do
+    if String.Chars.impl_for(item) do
+      try do
+        {:ok, to_string(item)}
+      rescue
+        _ -> :error
+      end
+    else
+      :error
     end
   end
 
@@ -186,11 +202,19 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
       visited
     else
       visited = MapSet.put(visited, id)
-      children = elements |> Map.get(id, %{}) |> Map.get("children", [])
+      children = extract_children(elements, id)
 
       Enum.reduce(children, visited, fn child_id, acc ->
         collect_reachable(Normalizer.safe_to_string(child_id), elements, acc)
       end)
+    end
+  end
+
+  defp extract_children(elements, id) do
+    case Map.get(elements, id) do
+      %{"children" => children} when is_list(children) -> children
+      %{children: children} when is_list(children) -> children
+      _ -> []
     end
   end
 end
