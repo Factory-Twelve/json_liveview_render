@@ -6,6 +6,12 @@ Parent gate: [FAC-61 - v0.3 hardening milestone closeout gate](https://linear.ap
 
 Use this page as the required release gate before closing FAC-61 and before running `mix hex.publish`.
 
+## FAC-70 Migration and Approval Package
+
+- Migration summary (v0.2 -> v0.3 gate): [`docs/v0.3_migration_notes.md`](docs/v0.3_migration_notes.md)
+- Local-use stability approval artifact: [`docs/v0.3_local_use_approval.md`](docs/v0.3_local_use_approval.md)
+- Parent-gate reference target: [FAC-61](https://linear.app/factorytwelve/issue/FAC-61/v03-hardening-milestone-closeout-gate)
+
 ## Gate Checklist
 
 - [ ] All required smoke tests in the matrix below pass with `0 failures`.
@@ -13,6 +19,7 @@ Use this page as the required release gate before closing FAC-61 and before runn
 - [ ] `mix compile --warnings-as-errors` passes.
 - [ ] `MIX_PUBSUB=0 mix test` passes.
 - [ ] `make release-check` passes without manual overrides.
+- [ ] FAC-70 migration summary and approval artifact are linked in FAC-61.
 - [ ] FAC-61 contains maintainer sign-off and any documented caveats.
 
 ## Required Smoke Matrix
