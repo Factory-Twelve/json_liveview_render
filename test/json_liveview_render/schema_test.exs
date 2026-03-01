@@ -8,6 +8,16 @@ defmodule JsonLiveviewRender.SchemaTest do
   alias JsonLiveviewRenderTest.SchemaFixtures.MediumCatalog
   alias JsonLiveviewRenderTest.SchemaFixtures.SmallCatalog
 
+  defmodule WeirdPermissionCatalog do
+    use JsonLiveviewRender.Catalog
+
+    component :weird do
+      description("Catalog with non-stringable permission entries")
+      prop(:title, :string, required: true)
+      permission(%{any_of: [%{role: :admin}], deny: [%{blocked: true}]})
+    end
+  end
+
   test "small catalog export matches golden schema and prompt fixtures" do
     assert fixture_json("small_catalog.json") == Schema.to_json_schema(SmallCatalog)
     assert fixture_text("small_prompt.txt") == Schema.to_prompt(SmallCatalog)
@@ -62,6 +72,13 @@ defmodule JsonLiveviewRender.SchemaTest do
     assert {:error, reasons} = Spec.validate(strict_spec, MediumCatalog)
     assert Enum.any?(reasons, fn {reason, _} -> reason == :unknown_prop end)
     assert {:ok, _} = Spec.validate(strict_spec, MediumCatalog, strict: false)
+  end
+
+  test "prompt export handles non-standard permission role terms without raising" do
+    prompt = Schema.to_prompt(WeirdPermissionCatalog)
+    assert is_binary(prompt)
+    assert String.contains?(prompt, "%{role: :admin}")
+    assert String.contains?(prompt, "%{blocked: true}")
   end
 
   defp fixture_json(filename) do

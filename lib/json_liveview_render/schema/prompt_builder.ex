@@ -71,12 +71,17 @@ defmodule JsonLiveviewRender.Schema.PromptBuilder do
   defp permissions_text(permission), do: inspect(permission)
 
   defp format_role_list(roles) when is_list(roles),
-    do: "[" <> Enum.map_join(roles, ", ", &to_string/1) <> "]"
+    do: "[" <> Enum.map_join(roles, ", ", &role_to_text/1) <> "]"
 
   defp format_role_list(roles), do: inspect(roles)
 
   defp format_deny_clause([]), do: ""
   defp format_deny_clause(deny_roles), do: ", deny: #{format_role_list(deny_roles)}"
+
+  defp role_to_text(role) when is_atom(role), do: Atom.to_string(role)
+  defp role_to_text(role) when is_binary(role), do: role
+  defp role_to_text(role) when is_number(role), do: to_string(role)
+  defp role_to_text(role), do: inspect(role)
 
   defp prop_line(prop_name, %PropDef{} = prop_def) do
     req = if prop_def.required, do: "required", else: "optional"
