@@ -19,7 +19,6 @@ defmodule JsonLiveviewRender.Benchmark.Suite.Validate do
           JsonLiveviewRender.Spec.validate(context.spec, JsonLiveviewRender.Benchmark.Catalog)
         end),
       name: "validate",
-      kind: "validate",
       status: :ok
     }
   end

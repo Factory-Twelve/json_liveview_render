@@ -15,6 +15,6 @@ defmodule JsonLiveviewRender.Benchmark.Suite.Render do
     end
 
     %{metrics: Metrics.measure(config.iterations, render_fn)}
-    |> Map.merge(%{name: "render", kind: "render", status: :ok})
+    |> Map.merge(%{name: "render", status: :ok})
   end
 end
