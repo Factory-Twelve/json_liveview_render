@@ -7,15 +7,18 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
   def run(%Config{} = config) do
     context = Data.setup(config)
 
-    try do
-      %{
-        metadata: metadata(config),
-        config: Config.to_map(config),
-        suites: Suites.run(config, context)
-      }
-    after
-      Data.teardown(context)
-    end
+    suites =
+      try do
+        Suites.run(config, context)
+      after
+        Data.teardown(context)
+      end
+
+    %{
+      metadata: metadata(config),
+      config: Config.to_map(config),
+      suites: suites
+    }
   end
 
   defp metadata(%Config{} = config) do
