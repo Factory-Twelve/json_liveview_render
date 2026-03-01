@@ -1,6 +1,7 @@
 defmodule JsonLiveviewRender.Benchmark.MatrixTest do
   use ExUnit.Case, async: false
 
+  alias JsonLiveviewRender.Benchmark.Config
   alias JsonLiveviewRender.Benchmark.Matrix
 
   test "default matrix definitions include validate tiers and render coverage cases" do
@@ -34,5 +35,23 @@ defmodule JsonLiveviewRender.Benchmark.MatrixTest do
              {5, 4, 341},
              {6, 4, 1024}
            ]
+  end
+
+  test "render seeds stay stable when default matrix includes validate tiers" do
+    seed = 111
+    render_case_names = MapSet.new(Enum.map(Matrix.case_definitions([:render]), & &1.case_name))
+
+    default_render_seed_pairs =
+      Config.from_options(seed: seed)
+      |> Matrix.configs_for()
+      |> Enum.filter(&MapSet.member?(render_case_names, &1.case_name))
+      |> Enum.map(&{&1.case_name, &1.seed})
+
+    render_only_seed_pairs =
+      Config.from_options(seed: seed, suites: [:render])
+      |> Matrix.configs_for()
+      |> Enum.map(&{&1.case_name, &1.seed})
+
+    assert default_render_seed_pairs == render_only_seed_pairs
   end
 end

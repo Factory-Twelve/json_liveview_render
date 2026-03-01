@@ -90,20 +90,24 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
 
   @spec configs_for(Config.t()) :: [Config.t()]
   def configs_for(%Config{} = base_config) do
-    case_definitions(base_config.suites)
-    |> Enum.with_index(fn case_opts, index ->
-      [
-        iterations: base_config.iterations,
-        suites: base_config.suites,
-        seed: base_config.seed + index,
-        node_count: case_opts.node_count,
-        depth: case_opts.depth,
-        branching_factor: case_opts.branching_factor,
-        ci: base_config.ci,
-        format: base_config.format,
-        case_name: case_opts.case_name
-      ]
-      |> Config.from_options()
+    base_config.suites
+    |> Enum.uniq()
+    |> Enum.flat_map(fn suite ->
+      case_definitions_for_suite(suite)
+      |> Enum.with_index(fn case_opts, suite_index ->
+        [
+          iterations: base_config.iterations,
+          suites: base_config.suites,
+          seed: base_config.seed + suite_index,
+          node_count: case_opts.node_count,
+          depth: case_opts.depth,
+          branching_factor: case_opts.branching_factor,
+          ci: base_config.ci,
+          format: base_config.format,
+          case_name: case_opts.case_name
+        ]
+        |> Config.from_options()
+      end)
     end)
   end
 end
