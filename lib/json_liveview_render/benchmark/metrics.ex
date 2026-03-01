@@ -27,21 +27,21 @@ defmodule JsonLiveviewRender.Benchmark.Metrics do
   defp analyze(sorted_timings) do
     count = length(sorted_timings)
     total = Enum.sum(sorted_timings)
+    sorted_tuple = List.to_tuple(sorted_timings)
 
     %{
       iterations: count,
       total_microseconds: total,
       mean_microseconds: total / count,
-      min_microseconds: List.first(sorted_timings),
-      max_microseconds: List.last(sorted_timings),
-      p95_microseconds: percentile(sorted_timings, 95),
-      p99_microseconds: percentile(sorted_timings, 99)
+      min_microseconds: elem(sorted_tuple, 0),
+      max_microseconds: elem(sorted_tuple, count - 1),
+      p95_microseconds: percentile(sorted_tuple, count, 95),
+      p99_microseconds: percentile(sorted_tuple, count, 99)
     }
   end
 
-  defp percentile(sorted_timings, percentile) when is_list(sorted_timings) do
-    size = length(sorted_timings)
-    index = max(round(size * percentile / 100.0) - 1, 0)
-    Enum.at(sorted_timings, index)
+  defp percentile(sorted_tuple, size, pct) do
+    index = max(round(size * pct / 100.0) - 1, 0)
+    elem(sorted_tuple, index)
   end
 end

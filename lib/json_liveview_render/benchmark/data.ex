@@ -18,7 +18,7 @@ defmodule JsonLiveviewRender.Benchmark.Data do
       spec: spec,
       catalog: JsonLiveviewRender.Benchmark.Catalog,
       registry: JsonLiveviewRender.Benchmark.Registry,
-      render_assigns: render_assigns(spec)
+      render_assigns: render_assigns()
     }
   end
 
@@ -29,82 +29,25 @@ defmodule JsonLiveviewRender.Benchmark.Data do
   def build_spec(%Config{} = config) do
     section_payloads = Enum.map(section_indices(config), &build_section_payload(&1, config))
 
-    root_section_ids =
-      Enum.map(section_payloads, fn {
-                                      section_id,
-                                      _section_node,
-                                      _row_id,
-                                      _row_node,
-                                      _column_nodes,
-                                      _metric_nodes
-                                    } ->
-        section_id
+    {root_section_ids, elements} =
+      Enum.reduce(section_payloads, {[], %{}}, fn payload, {ids, elems} ->
+        elems =
+          elems
+          |> Map.put(payload.section_id, payload.section_node)
+          |> Map.put(payload.row_id, payload.row_node)
+          |> Map.merge(Map.new(payload.column_nodes))
+          |> Map.merge(Map.new(payload.metric_nodes))
+
+        {[payload.section_id | ids], elems}
       end)
 
     root_node = %{
       "type" => "row",
       "props" => %{},
-      "children" => root_section_ids
+      "children" => Enum.reverse(root_section_ids)
     }
 
-    section_nodes =
-      Map.new(section_payloads, fn {
-                                     section_id,
-                                     section_node,
-                                     _row_id,
-                                     _row_node,
-                                     _column_nodes,
-                                     _metric_nodes
-                                   } ->
-        {section_id, section_node}
-      end)
-
-    row_nodes =
-      Map.new(section_payloads, fn {
-                                     _section_id,
-                                     _section_node,
-                                     row_id,
-                                     row_node,
-                                     _column_nodes,
-                                     _metric_nodes
-                                   } ->
-        {row_id, row_node}
-      end)
-
-    column_nodes =
-      section_payloads
-      |> Enum.flat_map(fn {
-                            _section_id,
-                            _section_node,
-                            _row_id,
-                            _row_node,
-                            column_nodes,
-                            _metric_nodes
-                          } ->
-        column_nodes
-      end)
-      |> Map.new()
-
-    metric_nodes =
-      section_payloads
-      |> Enum.flat_map(fn {
-                            _section_id,
-                            _section_node,
-                            _row_id,
-                            _row_node,
-                            _column_nodes,
-                            metric_nodes
-                          } ->
-        metric_nodes
-      end)
-      |> Map.new()
-
-    elements =
-      %{"bench_root" => root_node}
-      |> Map.merge(section_nodes)
-      |> Map.merge(row_nodes)
-      |> Map.merge(column_nodes)
-      |> Map.merge(metric_nodes)
+    elements = Map.put(elements, "bench_root", root_node)
 
     %{"root" => "bench_root", "elements" => elements}
   end
@@ -128,7 +71,14 @@ defmodule JsonLiveviewRender.Benchmark.Data do
       "children" => Enum.map(column_nodes, fn {id, _node} -> id end)
     }
 
-    {"section_#{section_index}", section_node, row_id, row_node, column_nodes, metric_nodes}
+    %{
+      section_id: "section_#{section_index}",
+      section_node: section_node,
+      row_id: row_id,
+      row_node: row_node,
+      column_nodes: column_nodes,
+      metric_nodes: metric_nodes
+    }
   end
 
   defp build_column_nodes(section_index, %Config{} = config) do
@@ -171,9 +121,8 @@ defmodule JsonLiveviewRender.Benchmark.Data do
     rem(section_index * 19_231 + column_index * 971 + metric_index * 37 + seed, 10_000)
   end
 
-  defp render_assigns(spec) do
+  defp render_assigns do
     [
-      spec: spec,
       catalog: JsonLiveviewRender.Benchmark.Catalog,
       registry: JsonLiveviewRender.Benchmark.Registry,
       current_user: %{role: :member},

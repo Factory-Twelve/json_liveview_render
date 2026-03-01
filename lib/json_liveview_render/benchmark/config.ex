@@ -42,16 +42,9 @@ defmodule JsonLiveviewRender.Benchmark.Config do
 
   @spec to_map(t()) :: map()
   def to_map(%__MODULE__{} = config) do
-    %{
-      iterations: config.iterations,
-      suites: Enum.map(config.suites, &Atom.to_string/1),
-      seed: config.seed,
-      sections: config.sections,
-      columns: config.columns,
-      metrics_per_column: config.metrics_per_column,
-      format: config.format,
-      ci: config.ci
-    }
+    config
+    |> Map.from_struct()
+    |> Map.update!(:suites, fn suites -> Enum.map(suites, &Atom.to_string/1) end)
   end
 
   defp sanitize_options(raw_options) do
@@ -75,17 +68,12 @@ defmodule JsonLiveviewRender.Benchmark.Config do
     options
   end
 
+  @struct_keys [:iterations, :suites, :seed, :sections, :columns, :metrics_per_column, :format, :ci]
+
   defp build_struct(options) do
-    %__MODULE__{
-      iterations: Keyword.fetch!(options, :iterations),
-      suites: Keyword.fetch!(options, :suites),
-      seed: Keyword.fetch!(options, :seed),
-      sections: Keyword.fetch!(options, :sections),
-      columns: Keyword.fetch!(options, :columns),
-      metrics_per_column: Keyword.fetch!(options, :metrics_per_column),
-      format: Keyword.fetch!(options, :format),
-      ci: Keyword.fetch!(options, :ci)
-    }
+    options
+    |> Keyword.take(@struct_keys)
+    |> then(&struct!(__MODULE__, &1))
   end
 
   defp normalize_integer(value) when is_integer(value), do: value

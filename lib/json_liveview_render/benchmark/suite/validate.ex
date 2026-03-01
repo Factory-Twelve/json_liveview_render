@@ -14,6 +14,7 @@ defmodule JsonLiveviewRender.Benchmark.Suite.Validate do
     end
 
     %{
+      name: "validate",
       metrics:
         Metrics.measure(config.iterations, fn ->
           JsonLiveviewRender.Spec.validate(context.spec, JsonLiveviewRender.Benchmark.Catalog)
