@@ -9,10 +9,8 @@ if [ "${CI:-false}" = "true" ]; then
       --format=*)
         ;;
       --format)
-        if [[ $# -gt 1 ]]; then
+        if [[ $# -gt 1 ]] && [[ "$2" != --* ]]; then
           shift
-        else
-          break
         fi
         ;;
       *)
