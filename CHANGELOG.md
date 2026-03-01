@@ -22,6 +22,16 @@
 
 - Marked streaming adapters and DevTools as experimental/companion-surface and out of the v0.3 core contract.
 
+#### Migration context and caveats
+
+- v0.2 core API consumers are expected to remain non-breaking through this v0.3 scope-lock draft.
+- v0.3 behavior changes are opt-in for partial/streaming flows (`validate_partial/3`, `allow_partial`), so full-spec v0.2 core paths do not require migration changes.
+- Stream event handling is now stricter for malformed or out-of-order event payloads; teams using incremental streaming should verify provider normalization/error handling paths.
+- Adapter references and DevTools remain experimental/deferred surfaces and are not part of the stable v0.3 core contract.
+- FAC-70 release-gate artifacts:
+  - Migration summary: `docs/v0.3_migration_notes.md`
+  - Explicit local-use stability approval: `docs/v0.3_local_use_approval.md`
+
 #### Changes
 
 - Added `mix json_liveview_render.check_metadata` as a reproducible metadata validation
