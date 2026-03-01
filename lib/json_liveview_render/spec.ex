@@ -288,5 +288,4 @@ defmodule JsonLiveviewRender.Spec do
 
   defp validate_element_props(id, _element, _catalog, _strict?),
     do: {:error, {:invalid_props, "element #{inspect(id)} props must be a map"}}
-
 end

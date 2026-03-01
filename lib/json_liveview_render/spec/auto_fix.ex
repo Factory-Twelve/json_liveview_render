@@ -101,7 +101,7 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
 
   defp fix_props(id, props, prop_defs) when is_map(props) do
     Enum.reduce(prop_defs, {props, []}, fn {prop_name, %PropDef{type: expected_type}},
-                                            {acc_props, acc_fixes} ->
+                                           {acc_props, acc_fixes} ->
       key = Atom.to_string(prop_name)
 
       case Map.fetch(acc_props, key) do

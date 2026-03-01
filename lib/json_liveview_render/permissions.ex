@@ -297,7 +297,8 @@ defmodule JsonLiveviewRender.Permissions do
       new_set = MapSet.put(acc_set, role_key)
       inherited = Map.get(inheritance_graph, role_key, [])
 
-      Enum.reduce(inherited, {new_list, new_set}, fn inherited_role_key, {inner_list, inner_set} ->
+      Enum.reduce(inherited, {new_list, new_set}, fn inherited_role_key,
+                                                     {inner_list, inner_set} ->
         do_expand_role(inherited_role_key, inheritance_graph, inner_list, inner_set)
       end)
     end

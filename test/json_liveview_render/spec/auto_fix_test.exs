@@ -102,7 +102,8 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
         }
       }
 
-      {:ok, fixed, fixes} = Spec.auto_fix(spec, JsonLiveviewRenderTest.SchemaFixtures.MediumCatalog)
+      {:ok, fixed, fixes} =
+        Spec.auto_fix(spec, JsonLiveviewRenderTest.SchemaFixtures.MediumCatalog)
 
       assert fixed["elements"]["dt_1"]["props"]["show_totals"] == true
       assert Enum.any?(fixes, &String.contains?(&1, "coerced"))
@@ -125,7 +126,8 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
         }
       }
 
-      {:ok, fixed, fixes} = Spec.auto_fix(spec, JsonLiveviewRenderTest.SchemaFixtures.MediumCatalog)
+      {:ok, fixed, fixes} =
+        Spec.auto_fix(spec, JsonLiveviewRenderTest.SchemaFixtures.MediumCatalog)
 
       assert fixed["elements"]["dt_1"]["props"]["show_totals"] == false
       assert Enum.any?(fixes, &String.contains?(&1, "coerced"))
@@ -147,7 +149,8 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
         }
       }
 
-      {:ok, fixed, fixes} = Spec.auto_fix(spec, JsonLiveviewRenderTest.SchemaFixtures.MediumCatalog)
+      {:ok, fixed, fixes} =
+        Spec.auto_fix(spec, JsonLiveviewRenderTest.SchemaFixtures.MediumCatalog)
 
       assert fixed["elements"]["dt_1"]["props"]["show_totals"] == "maybe"
       refute Enum.any?(fixes, &String.contains?(&1, "coerced"))

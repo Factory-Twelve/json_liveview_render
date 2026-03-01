@@ -116,7 +116,16 @@ defmodule JsonLiveviewRender.Renderer do
       %{"type" => type} = element ->
         if error_boundary do
           try do
-            do_render_element(type, element, spec, catalog, registry, bindings, check_binding_types, error_boundary)
+            do_render_element(
+              type,
+              element,
+              spec,
+              catalog,
+              registry,
+              bindings,
+              check_binding_types,
+              error_boundary
+            )
           rescue
             e ->
               Logger.warning(
@@ -126,12 +135,30 @@ defmodule JsonLiveviewRender.Renderer do
               nil
           end
         else
-          do_render_element(type, element, spec, catalog, registry, bindings, check_binding_types, error_boundary)
+          do_render_element(
+            type,
+            element,
+            spec,
+            catalog,
+            registry,
+            bindings,
+            check_binding_types,
+            error_boundary
+          )
         end
     end
   end
 
-  defp do_render_element(type, element, spec, catalog, registry, bindings, check_binding_types, error_boundary) do
+  defp do_render_element(
+         type,
+         element,
+         spec,
+         catalog,
+         registry,
+         bindings,
+         check_binding_types,
+         error_boundary
+       ) do
     component = catalog.component(type)
     callback = Registry.fetch!(registry, type)
 
@@ -147,7 +174,17 @@ defmodule JsonLiveviewRender.Renderer do
     children =
       element
       |> Map.get("children", [])
-      |> Enum.map(&render_element(&1, spec, catalog, registry, bindings, check_binding_types, error_boundary))
+      |> Enum.map(
+        &render_element(
+          &1,
+          spec,
+          catalog,
+          registry,
+          bindings,
+          check_binding_types,
+          error_boundary
+        )
+      )
 
     assigns = to_component_assigns(component.props, resolved_props, children)
 

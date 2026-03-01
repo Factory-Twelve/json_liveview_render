@@ -152,5 +152,4 @@ defmodule JsonLiveviewRender.Stream do
   def to_spec(stream) do
     %{"root" => stream.root, "elements" => stream.elements}
   end
-
 end

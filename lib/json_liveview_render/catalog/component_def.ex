@@ -54,8 +54,8 @@ defmodule JsonLiveviewRender.Catalog.PropDef do
   end
 
   def valid?(value, %__MODULE__{type: :custom, validator: validator})
-       when is_function(validator, 1),
-       do: validator.(value)
+      when is_function(validator, 1),
+      do: validator.(value)
 
   def valid?(_value, _prop), do: false
 end
