@@ -3,7 +3,7 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
 
   alias JsonLiveviewRender.Benchmark.Config
 
-  @case_definitions [
+  @validate_case_definitions [
     %{
       case_name: "validate_small_depth_4_width_2_nodes_15",
       depth: 4,
@@ -24,6 +24,27 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
     }
   ]
 
+  @render_case_definitions [
+    %{
+      case_name: "render_small_depth_4_width_2_nodes_15",
+      depth: 4,
+      branching_factor: 2,
+      node_count: 15
+    },
+    %{
+      case_name: "render_typical_depth_5_width_4_nodes_341",
+      depth: 5,
+      branching_factor: 4,
+      node_count: 341
+    },
+    %{
+      case_name: "render_pathological_depth_6_width_4_nodes_1024",
+      depth: 6,
+      branching_factor: 4,
+      node_count: 1024
+    }
+  ]
+
   @spec case_definitions() :: [
           %{
             required(:depth) => pos_integer(),
@@ -33,12 +54,31 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
           }
         ]
   def case_definitions do
-    @case_definitions
+    @validate_case_definitions
   end
+
+  @spec case_definitions([Config.suite()]) :: [
+          %{
+            required(:depth) => pos_integer(),
+            required(:branching_factor) => pos_integer(),
+            required(:node_count) => pos_integer(),
+            required(:case_name) => String.t()
+          }
+        ]
+  def case_definitions([_ | _] = suites) do
+    suites
+    |> Enum.uniq()
+    |> Enum.flat_map(&case_definitions_for_suite/1)
+  end
+
+  defp case_definitions_for_suite(:validate), do: @validate_case_definitions
+  defp case_definitions_for_suite(:render), do: @render_case_definitions
+
+  defp case_definitions_for_suite(_), do: []
 
   @spec configs_for(Config.t()) :: [Config.t()]
   def configs_for(%Config{} = base_config) do
-    case_definitions()
+    case_definitions(base_config.suites)
     |> Enum.with_index(fn case_opts, index ->
       [
         iterations: base_config.iterations,
