@@ -1,8 +1,18 @@
 # Changelog
 
-## Unreleased (v0.3 scope lock)
+## Unreleased (template)
 
-### API stability scope lock
+### Non-released
+- Items here are still in progress, exploratory, or waiting for confirmation.
+- Keep non-release work here until it is intentionally prepared for the next release.
+
+### Release-ready
+- Items here are the release draft for the next version bump.
+- When cutting a release, move only this block into a versioned heading and keep `### Non-released` for future work.
+
+### v0.3 scope lock release draft
+
+#### API stability scope lock
 
 - Added explicit v0.3 package-level API scope in `README.md`:
 
@@ -12,7 +22,7 @@
 
 - Marked streaming adapters and DevTools as experimental/companion-surface and out of the v0.3 core contract.
 
-### Changes
+#### Changes
 
 - Added `mix json_liveview_render.check_metadata` as a reproducible metadata validation
   command for required Hex fields before release.
