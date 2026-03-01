@@ -1,0 +1,38 @@
+{
+  "card": {
+    "actions": [
+      {
+        "id": "hold_shipment",
+        "label": "Hold Shipment",
+        "style": "danger"
+      },
+      {
+        "id": "request_reinspection",
+        "label": "Request Re-inspection",
+        "style": "primary"
+      },
+      {
+        "id": "view_history",
+        "label": "Factory History",
+        "style": "default"
+      }
+    ],
+    "body": [
+      "3rd failure this quarter",
+      "Fleece weight 290gsm vs spec 320gsm on style FW26-HD-001"
+    ],
+    "facts": [
+      {
+        "label": "Impact",
+        "value": "$12,400 at risk across 3 POs"
+      }
+    ],
+    "id": "alert_card",
+    "severity": "critical",
+    "title": "QC Alert: Zhongshan Textiles"
+  },
+  "message": {
+    "text": "QC Alert: Zhongshan Textiles\n\n3rd failure this quarter\nFleece weight 290gsm vs spec 320gsm on style FW26-HD-001"
+  },
+  "role": "assistant"
+}

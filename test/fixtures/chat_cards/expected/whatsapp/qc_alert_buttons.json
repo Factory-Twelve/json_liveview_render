@@ -1,0 +1,35 @@
+{
+  "interactive": {
+    "action": {
+      "buttons": [
+        {
+          "reply": {
+            "id": "hold_shipment",
+            "title": "Hold Shipment"
+          },
+          "type": "reply"
+        },
+        {
+          "reply": {
+            "id": "request_reinspection",
+            "title": "Request Re-inspectio"
+          },
+          "type": "reply"
+        },
+        {
+          "reply": {
+            "id": "view_history",
+            "title": "Factory History"
+          },
+          "type": "reply"
+        }
+      ]
+    },
+    "body": {
+      "text": "QC Alert: Zhongshan Textiles\n\n3rd failure this quarter\n\nFleece weight 290gsm vs spec 320gsm on style FW26-HD-001\n\nImpact: $12,400 at risk across 3 POs"
+    },
+    "type": "button"
+  },
+  "messaging_product": "whatsapp",
+  "type": "interactive"
+}

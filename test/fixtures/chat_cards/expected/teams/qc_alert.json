@@ -1,0 +1,83 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "actions": [
+    {
+      "data": {
+        "action": "hold_shipment",
+        "metadata": {
+          "path": [
+            "alert_card",
+            "actions",
+            "hold"
+          ],
+          "element_id": "hold"
+        }
+      },
+      "style": "destructive",
+      "title": "Hold Shipment",
+      "type": "Action.Submit"
+    },
+    {
+      "data": {
+        "action": "request_reinspection",
+        "metadata": {
+          "path": [
+            "alert_card",
+            "actions",
+            "reinspect"
+          ],
+          "element_id": "reinspect"
+        }
+      },
+      "style": "positive",
+      "title": "Request Re-inspection",
+      "type": "Action.Submit"
+    },
+    {
+      "data": {
+        "action": "view_history",
+        "metadata": {
+          "path": [
+            "alert_card",
+            "actions",
+            "history"
+          ],
+          "element_id": "history"
+        }
+      },
+      "style": null,
+      "title": "Factory History",
+      "type": "Action.Submit"
+    }
+  ],
+  "body": [
+    {
+      "size": "Large",
+      "text": "QC Alert: Zhongshan Textiles",
+      "type": "TextBlock",
+      "weight": "Bolder"
+    },
+    {
+      "color": "Attention",
+      "size": "Small",
+      "text": "CRITICAL",
+      "type": "TextBlock"
+    },
+    {
+      "text": "3rd failure this quarter\nFleece weight 290gsm vs spec 320gsm on style FW26-HD-001",
+      "type": "TextBlock",
+      "wrap": true
+    },
+    {
+      "facts": [
+        {
+          "title": "Impact",
+          "value": "$12,400 at risk across 3 POs"
+        }
+      ],
+      "type": "FactSet"
+    }
+  ],
+  "type": "AdaptiveCard",
+  "version": "1.5"
+}

@@ -53,7 +53,8 @@ defmodule JsonLiveviewRender.Spec.Errors do
     do: {:unknown_prop, "element #{inspect(id)} includes unknown prop #{inspect(prop)}"}
 
   @doc "Error: a prop value does not match the expected type."
-  @spec invalid_prop_type(String.t(), String.t(), atom(), term()) :: {:invalid_prop_type, String.t()}
+  @spec invalid_prop_type(String.t(), String.t(), atom(), term()) ::
+          {:invalid_prop_type, String.t()}
   def invalid_prop_type(id, prop, expected, actual) do
     {:invalid_prop_type,
      "element #{inspect(id)} prop #{inspect(prop)} expected #{inspect(expected)}, got #{inspect(actual)}"}
