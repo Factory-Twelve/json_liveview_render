@@ -475,7 +475,7 @@ You can also call the task directly:
 mix json_liveview_render.bench
 
 # common options
-mix json_liveview_render.bench --iterations 500 --suites validate,render --seed 2026_03_01
+mix json_liveview_render.bench --iterations 500 --suites validate,render --seed 20260301
 mix json_liveview_render.bench --format json --sections 24 --columns 3 --metrics-per-column 10
 ```
 

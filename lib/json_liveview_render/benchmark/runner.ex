@@ -61,25 +61,7 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
   end
 
   defp process_count do
-    count = :erlang.system_info(:process_count)
-
-    if capture_io_leader?() do
-      count - 1
-    else
-      count
-    end
-  end
-
-  defp capture_io_leader? do
-    Process.group_leader()
-    |> Process.info(:dictionary)
-    |> case do
-      {:dictionary, dictionary} ->
-        Keyword.get(dictionary, :"$initial_call") == {StringIO, :init, 1}
-
-      _ ->
-        false
-    end
+    :erlang.system_info(:process_count)
   end
 
   defp word_size do
@@ -177,13 +159,13 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
       report.metadata.machine.os_type,
       "\n",
       "  logical_processors=",
-      Integer.to_string(report.metadata.machine.logical_processors),
+      metric_to_string(report.metadata.machine.logical_processors),
       "\n",
       "  schedulers_online=",
-      Integer.to_string(report.metadata.machine.schedulers_online),
+      metric_to_string(report.metadata.machine.schedulers_online),
       "\n",
       "  word_size=",
-      Integer.to_string(report.metadata.machine.word_size),
+      metric_to_string(report.metadata.machine.word_size),
       "\n",
       "  timestamp_utc=",
       report.metadata.benchmarked_at_utc,
@@ -200,4 +182,8 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
     |> Float.round(3)
     |> :erlang.float_to_binary(decimals: 3)
   end
+
+  defp metric_to_string(value) when is_integer(value), do: Integer.to_string(value)
+  defp metric_to_string(value) when value in [:unknown, nil], do: "unknown"
+  defp metric_to_string(value), do: to_string(value)
 end
