@@ -108,19 +108,19 @@ defmodule JsonLiveviewRender.Benchmark.Config do
 
   defp normalize_suites(value) when is_binary(value) do
     value
-      |> String.split(",", trim: true)
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-      |> validate_non_empty_suites!()
-      |> Enum.map(&normalize_suite/1)
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> validate_non_empty_suites!()
+    |> Enum.map(&normalize_suite/1)
   end
 
   defp normalize_suites(value) when is_list(value) do
     value
-      |> Enum.map(&normalize_suite_input/1)
-      |> Enum.reject(&(&1 in [nil, ""]))
-      |> validate_non_empty_suites!()
-      |> Enum.map(&normalize_suite/1)
+    |> Enum.map(&normalize_suite_input/1)
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> validate_non_empty_suites!()
+    |> Enum.map(&normalize_suite/1)
   end
 
   defp normalize_suites(value),
