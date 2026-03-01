@@ -4,7 +4,7 @@ defmodule JsonLiveviewRender.Benchmark.GuardrailPathTest do
   alias JsonLiveviewRender.Benchmark.Guardrail
 
   test "default thresholds path resolves relative to project regardless of cwd" do
-    expected_path = Path.expand("../../../../benchmarks/thresholds.json", __DIR__)
+    expected_path = Path.expand("../../../benchmarks/thresholds.json", __DIR__)
 
     tmp_dir =
       Path.join(
