@@ -369,6 +369,12 @@ Use one canonical command before publishing a new Hex release:
 make release-check
 ```
 
+Before running release checks, prepare release notes in the [unreleased changelog template](CHANGELOG.md#unreleased-template):
+
+- add in-progress items to `### Non-released`
+- promote intentful entries to `### Release-ready`
+- move `### Release-ready` content into a new version heading (`## X.Y.Z - YYYY-MM-DD`) before publishing and tag creation
+
 For local iteration, release triggers, and tag policy, see [Release policy: local-first + tag policy](#release-policy-local-first--tag-policy).
 
 This runs the required release-sanity sequence:
@@ -399,7 +405,9 @@ Use the same branch for local experimentation as development, and keep iteration
   - Normal local/experimental work expects `no tag push`.
 
 - Release candidate path:
-  - Prepare the version and changelog for release intent.
+  - Prepare the version and changelog for release intent:
+    - keep exploratory notes in `### Non-released`
+    - keep release-intent content in `### Release-ready`
   - Run `make release-check`.
   - Keep iterative fixes local until `make release-check` is fully green.
 
