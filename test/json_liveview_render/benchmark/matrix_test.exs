@@ -55,6 +55,23 @@ defmodule JsonLiveviewRender.Benchmark.MatrixTest do
     assert default_render_seed_pairs == render_only_seed_pairs
   end
 
+  test "render seeds preserve historical base-seed offsets" do
+    seed = 111
+
+    render_seed_pairs =
+      Config.from_options(seed: seed, suites: [:render])
+      |> Matrix.configs_for()
+      |> Enum.map(&{&1.case_name, &1.seed})
+
+    assert render_seed_pairs == [
+             {"depth_4_width_2", 111},
+             {"depth_4_width_4", 112},
+             {"depth_5_width_2", 113},
+             {"depth_5_width_4", 114},
+             {"depth_6_width_4_nodes_1024", 115}
+           ]
+  end
+
   test "matrix configs pin each case to its originating suite" do
     case_suite_pairs =
       Config.from_options(seed: 111, suites: [:validate, :render])

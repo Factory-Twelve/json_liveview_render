@@ -6,18 +6,21 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
   @validate_case_definitions [
     %{
       case_name: "validate_small_depth_4_width_2_nodes_15",
+      seed_offset: 0,
       depth: 4,
       branching_factor: 2,
       node_count: 15
     },
     %{
       case_name: "validate_typical_depth_5_width_4_nodes_341",
+      seed_offset: 1,
       depth: 5,
       branching_factor: 4,
       node_count: 341
     },
     %{
       case_name: "validate_pathological_depth_6_width_4_nodes_1024",
+      seed_offset: 2,
       depth: 6,
       branching_factor: 4,
       node_count: 1024
@@ -27,30 +30,35 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
   @render_case_definitions [
     %{
       case_name: "depth_4_width_2",
+      seed_offset: 0,
       depth: 4,
       branching_factor: 2,
       node_count: 15
     },
     %{
       case_name: "depth_4_width_4",
+      seed_offset: 1,
       depth: 4,
       branching_factor: 4,
       node_count: 85
     },
     %{
       case_name: "depth_5_width_2",
+      seed_offset: 2,
       depth: 5,
       branching_factor: 2,
       node_count: 31
     },
     %{
       case_name: "depth_5_width_4",
+      seed_offset: 3,
       depth: 5,
       branching_factor: 4,
       node_count: 341
     },
     %{
       case_name: "depth_6_width_4_nodes_1024",
+      seed_offset: 4,
       depth: 6,
       branching_factor: 4,
       node_count: 1024
@@ -62,7 +70,8 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
             required(:depth) => pos_integer(),
             required(:branching_factor) => pos_integer(),
             required(:node_count) => pos_integer(),
-            required(:case_name) => String.t()
+            required(:case_name) => String.t(),
+            required(:seed_offset) => non_neg_integer()
           }
         ]
   def case_definitions do
@@ -74,7 +83,8 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
             required(:depth) => pos_integer(),
             required(:branching_factor) => pos_integer(),
             required(:node_count) => pos_integer(),
-            required(:case_name) => String.t()
+            required(:case_name) => String.t(),
+            required(:seed_offset) => non_neg_integer()
           }
         ]
   def case_definitions(suites) when is_list(suites) do
@@ -94,11 +104,11 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
     |> Enum.uniq()
     |> Enum.flat_map(fn suite ->
       case_definitions_for_suite(suite)
-      |> Enum.with_index(fn case_opts, case_index ->
+      |> Enum.map(fn case_opts ->
         [
           iterations: base_config.iterations,
           suites: [suite],
-          seed: base_config.seed + case_index,
+          seed: base_config.seed + case_opts.seed_offset,
           node_count: case_opts.node_count,
           depth: case_opts.depth,
           branching_factor: case_opts.branching_factor,
