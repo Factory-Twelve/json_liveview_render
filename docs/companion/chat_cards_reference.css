@@ -1,0 +1,108 @@
+:root {
+  --cc-bg: #f4f7fb;
+  --cc-card: #ffffff;
+  --cc-border: #d8e0ea;
+  --cc-text: #1f2a37;
+  --cc-muted: #556274;
+  --cc-critical: #b42318;
+  --cc-warning: #b54708;
+  --cc-primary: #175cd3;
+  --cc-danger: #b42318;
+  --cc-radius: 12px;
+  --cc-gap: 12px;
+}
+
+.cc-chat {
+  background: var(--cc-bg);
+  color: var(--cc-text);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  padding: 16px;
+}
+
+.cc-bubble {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.cc-card {
+  background: var(--cc-card);
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-gap);
+}
+
+.cc-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.cc-severity {
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cc-severity--critical {
+  color: var(--cc-critical);
+}
+
+.cc-severity--warning {
+  color: var(--cc-warning);
+}
+
+.cc-body {
+  color: var(--cc-text);
+  line-height: 1.4;
+}
+
+.cc-fact-row {
+  color: var(--cc-muted);
+  font-size: 14px;
+}
+
+.cc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cc-button {
+  border: 1px solid var(--cc-border);
+  background: #fff;
+  color: var(--cc-text);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cc-button--primary {
+  border-color: var(--cc-primary);
+  color: var(--cc-primary);
+}
+
+.cc-button--danger {
+  border-color: var(--cc-danger);
+  color: var(--cc-danger);
+}
+
+@media (max-width: 640px) {
+  .cc-chat {
+    padding: 10px;
+  }
+
+  .cc-card {
+    padding: 12px;
+  }
+
+  .cc-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

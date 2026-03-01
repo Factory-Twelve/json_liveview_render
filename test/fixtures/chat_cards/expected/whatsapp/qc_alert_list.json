@@ -1,0 +1,40 @@
+{
+  "interactive": {
+    "action": {
+      "button": "Choose action",
+      "sections": [
+        {
+          "rows": [
+            {
+              "description": "%{path: [\"alert_card\", \"actions\", \"hold\"], element_id: \"hold\"}",
+              "id": "hold_shipment",
+              "title": "Hold Shipment"
+            },
+            {
+              "description": "%{path: [\"alert_card\", \"actions\", \"reinspect\"], element_id: \"reinspect\"}",
+              "id": "request_reinspection",
+              "title": "Request Re-inspection"
+            },
+            {
+              "description": "%{path: [\"alert_card\", \"actions\", \"history\"], element_id: \"history\"}",
+              "id": "view_history",
+              "title": "Factory History"
+            },
+            {
+              "description": "%{path: [\"alert_card\", \"actions\", \"escalate\"], element_id: \"escalate\"}",
+              "id": "escalate_exec",
+              "title": "Escalate to Executive Op"
+            }
+          ],
+          "title": "Actions"
+        }
+      ]
+    },
+    "body": {
+      "text": "QC Alert: Zhongshan Textiles\n\n3rd failure this quarter\n\nFleece weight 290gsm vs spec 320gsm on style FW26-HD-001\n\nImpact: $12,400 at risk across 3 POs"
+    },
+    "type": "list"
+  },
+  "messaging_product": "whatsapp",
+  "type": "interactive"
+}

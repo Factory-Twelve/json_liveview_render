@@ -362,6 +362,11 @@ These adapters are companion-surface references and should not be treated as in-
 
 Use these modules only as reference patterns for provider-specific adapters.
 
+Companion chat-card adapters are available for internal experimentation under
+`JsonLiveviewRender.Companion.ChatCards` (LiveView reference, web_chat view-model,
+Slack Block Kit, Teams Adaptive Cards, WhatsApp interactive messages). This
+surface is intentionally non-core and should not be treated as a stable v0.x contract.
+
 ## DevTools (Experimental)
 
 Enable in-browser spec inspection while developing LiveViews:

@@ -1,0 +1,45 @@
+{
+  "root": "alert_card",
+  "elements": {
+    "alert_card": {
+      "type": "card",
+      "props": {"title": "QC Alert: Zhongshan Textiles"},
+      "children": ["severity", "detail", "impact", "actions"]
+    },
+    "severity": {
+      "type": "status_badge",
+      "props": {"severity": "critical", "label": "3rd failure this quarter"},
+      "children": []
+    },
+    "detail": {
+      "type": "text",
+      "props": {"content": "Fleece weight 290gsm vs spec 320gsm on style FW26-HD-001"},
+      "children": []
+    },
+    "impact": {
+      "type": "data_row",
+      "props": {"label": "Impact", "value": "$12,400 at risk across 3 POs"},
+      "children": []
+    },
+    "actions": {
+      "type": "actions",
+      "props": {},
+      "children": ["hold", "reinspect", "history"]
+    },
+    "hold": {
+      "type": "button",
+      "props": {"id": "hold_shipment", "label": "Hold Shipment", "style": "danger"},
+      "children": []
+    },
+    "reinspect": {
+      "type": "button",
+      "props": {"id": "request_reinspection", "label": "Request Re-inspection", "style": "primary"},
+      "children": []
+    },
+    "history": {
+      "type": "button",
+      "props": {"id": "view_history", "label": "Factory History"},
+      "children": []
+    }
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "card": {
+    "actions": [
+      {
+        "id": "hold_shipment",
+        "label": "Hold Shipment",
+        "metadata": {
+          "path": [
+            "alert_card",
+            "actions",
+            "hold"
+          ],
+          "element_id": "hold"
+        },
+        "style": "danger"
+      },
+      {
+        "id": "request_reinspection",
+        "label": "Request Re-inspection",
+        "metadata": {
+          "path": [
+            "alert_card",
+            "actions",
+            "reinspect"
+          ],
+          "element_id": "reinspect"
+        },
+        "style": "primary"
+      },
+      {
+        "id": "view_history",
+        "label": "Factory History",
+        "metadata": {
+          "path": [
+            "alert_card",
+            "actions",
+            "history"
+          ],
+          "element_id": "history"
+        },
+        "style": "default"
+      }
+    ],
+    "body": [
+      "3rd failure this quarter",
+      "Fleece weight 290gsm vs spec 320gsm on style FW26-HD-001"
+    ],
+    "facts": [
+      {
+        "label": "Impact",
+        "value": "$12,400 at risk across 3 POs"
+      }
+    ],
+    "id": "alert_card",
+    "severity": "critical",
+    "title": "QC Alert: Zhongshan Textiles"
+  },
+  "css_reference_path": "docs/companion/chat_cards_reference.css",
+  "spec": {
+    "elements": {
+      "actions": {
+        "children": [
+          "hold",
+          "reinspect",
+          "history"
+        ],
+        "props": {},
+        "type": "actions"
+      },
+      "alert_card": {
+        "children": [
+          "severity",
+          "detail",
+          "impact",
+          "actions"
+        ],
+        "props": {
+          "title": "QC Alert: Zhongshan Textiles"
+        },
+        "type": "card"
+      },
+      "detail": {
+        "children": [],
+        "props": {
+          "content": "Fleece weight 290gsm vs spec 320gsm on style FW26-HD-001"
+        },
+        "type": "text"
+      },
+      "history": {
+        "children": [],
+        "props": {
+          "id": "view_history",
+          "label": "Factory History"
+        },
+        "type": "button"
+      },
+      "hold": {
+        "children": [],
+        "props": {
+          "id": "hold_shipment",
+          "label": "Hold Shipment",
+          "style": "danger"
+        },
+        "type": "button"
+      },
+      "impact": {
+        "children": [],
+        "props": {
+          "label": "Impact",
+          "value": "$12,400 at risk across 3 POs"
+        },
+        "type": "data_row"
+      },
+      "reinspect": {
+        "children": [],
+        "props": {
+          "id": "request_reinspection",
+          "label": "Request Re-inspection",
+          "style": "primary"
+        },
+        "type": "button"
+      },
+      "severity": {
+        "children": [],
+        "props": {
+          "label": "3rd failure this quarter",
+          "severity": "critical"
+        },
+        "type": "status_badge"
+      }
+    },
+    "root": "alert_card"
+  },
+  "type": "liveview_spec"
+}
