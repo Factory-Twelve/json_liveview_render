@@ -26,19 +26,31 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
 
   @render_case_definitions [
     %{
-      case_name: "render_small_depth_4_width_2_nodes_15",
+      case_name: "depth_4_width_2",
       depth: 4,
       branching_factor: 2,
       node_count: 15
     },
     %{
-      case_name: "render_typical_depth_5_width_4_nodes_341",
+      case_name: "depth_4_width_4",
+      depth: 4,
+      branching_factor: 4,
+      node_count: 85
+    },
+    %{
+      case_name: "depth_5_width_2",
+      depth: 5,
+      branching_factor: 2,
+      node_count: 31
+    },
+    %{
+      case_name: "depth_5_width_4",
       depth: 5,
       branching_factor: 4,
       node_count: 341
     },
     %{
-      case_name: "render_pathological_depth_6_width_4_nodes_1024",
+      case_name: "depth_6_width_4_nodes_1024",
       depth: 6,
       branching_factor: 4,
       node_count: 1024
@@ -54,7 +66,7 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
           }
         ]
   def case_definitions do
-    @validate_case_definitions
+    case_definitions([:validate, :render])
   end
 
   @spec case_definitions([Config.suite()]) :: [
@@ -65,7 +77,7 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
             required(:case_name) => String.t()
           }
         ]
-  def case_definitions([_ | _] = suites) do
+  def case_definitions(suites) when is_list(suites) do
     suites
     |> Enum.uniq()
     |> Enum.flat_map(&case_definitions_for_suite/1)
