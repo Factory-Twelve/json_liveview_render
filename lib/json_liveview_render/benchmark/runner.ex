@@ -81,7 +81,7 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
   def format_json(report), do: Jason.encode_to_iodata!(report, pretty: true)
 
   @spec render_text(map()) :: iodata()
-def render_text(report) do
+  def render_text(report) do
     suite_lines =
       Enum.map(report.suites, fn suite ->
         metrics = suite.metrics
