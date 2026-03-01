@@ -55,9 +55,31 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
       system_version: to_string(:erlang.system_info(:system_version)),
       logical_processors: :erlang.system_info(:logical_processors_online),
       schedulers_online: :erlang.system_info(:schedulers_online),
-      process_count: :erlang.system_info(:process_count),
+      process_count: process_count(),
       word_size: word_size()
     }
+  end
+
+  defp process_count do
+    count = :erlang.system_info(:process_count)
+
+    if capture_io_leader?() do
+      count - 1
+    else
+      count
+    end
+  end
+
+  defp capture_io_leader? do
+    Process.group_leader()
+    |> Process.info(:dictionary)
+    |> case do
+      {:dictionary, dictionary} ->
+        Keyword.get(dictionary, :"$initial_call") == {StringIO, :init, 1}
+
+      _ ->
+        false
+    end
   end
 
   defp word_size do
