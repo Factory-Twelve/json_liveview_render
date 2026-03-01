@@ -18,6 +18,16 @@ defmodule JsonLiveviewRender.SchemaTest do
     end
   end
 
+  defmodule RequiredDefaultCatalog do
+    use JsonLiveviewRender.Catalog
+
+    component :metric_with_default do
+      description("Catalog with required+default prop semantics")
+      prop(:label, :string, required: true)
+      prop(:size, :string, required: true, default: "md")
+    end
+  end
+
   test "small catalog export matches golden schema and prompt fixtures" do
     assert fixture_json("small_catalog.json") == Schema.to_json_schema(SmallCatalog)
     assert fixture_text("small_prompt.txt") == Schema.to_prompt(SmallCatalog)
@@ -79,6 +89,12 @@ defmodule JsonLiveviewRender.SchemaTest do
     assert is_binary(prompt)
     assert String.contains?(prompt, "%{role: :admin}")
     assert String.contains?(prompt, "%{blocked: true}")
+  end
+
+  test "prompt required marker aligns with schema semantics for required+default props" do
+    prompt = Schema.to_prompt(RequiredDefaultCatalog)
+    assert String.contains?(prompt, "label (string, required)")
+    assert String.contains?(prompt, "size (string, optional)")
   end
 
   defp fixture_json(filename) do

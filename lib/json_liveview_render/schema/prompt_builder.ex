@@ -84,7 +84,8 @@ defmodule JsonLiveviewRender.Schema.PromptBuilder do
   defp role_to_text(role), do: inspect(role)
 
   defp prop_line(prop_name, %PropDef{} = prop_def) do
-    req = if prop_def.required, do: "required", else: "optional"
+    required? = prop_def.required and is_nil(prop_def.default)
+    req = if required?, do: "required", else: "optional"
     type = type_to_text(prop_def.type, prop_def.values)
 
     [Atom.to_string(prop_name), "(#{type}, #{req})", doc_text(prop_def.doc)]
