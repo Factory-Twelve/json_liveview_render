@@ -33,6 +33,7 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
     assert payload["config"]["suites"] == ["validate", "render"]
     assert payload["config"]["sections"] == 2
     assert payload["metadata"]["project"]["app"] == "json_liveview_render"
+    assert payload["metadata"]["machine"]["process_count"] == :erlang.system_info(:process_count)
     assert Enum.map(payload["suites"], & &1["name"]) == ["validate", "render"]
 
     assert payload["suites"]

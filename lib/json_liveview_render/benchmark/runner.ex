@@ -52,7 +52,7 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
       system_version: to_string(:erlang.system_info(:system_version)),
       logical_processors: :erlang.system_info(:logical_processors_online),
       schedulers_online: :erlang.system_info(:schedulers_online),
-      process_count: :erlang.system_info(:process_limit),
+      process_count: :erlang.system_info(:process_count),
       word_size: word_size()
     }
   end
