@@ -108,16 +108,24 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
       payload["cases"]
       |> Enum.map(fn entry -> Map.fetch!(entry, "config")["suites"] end)
 
-    assert Enum.all?(suite_names, &(&1 == ["validate", "render"]))
+    assert suite_names == [
+             ["validate"],
+             ["validate"],
+             ["validate"],
+             ["render"],
+             ["render"],
+             ["render"],
+             ["render"],
+             ["render"]
+           ]
 
     for case_entry <- payload["cases"] do
-      validate_suite = Map.get(case_entry, "suites") |> Enum.find(&(&1["name"] == "validate"))
-      render_suite = Map.get(case_entry, "suites") |> Enum.find(&(&1["name"] == "render"))
+      configured_suites = case_entry["config"]["suites"]
+      assert Enum.map(case_entry["suites"], & &1["name"]) == configured_suites
 
-      assert validate_suite["metrics"]["p50_microseconds"] != nil
-      assert validate_suite["metrics"]["memory_p95_bytes"] != nil
-      assert render_suite["metrics"]["p50_microseconds"] != nil
-      assert render_suite["metrics"]["memory_p95_bytes"] != nil
+      suite_entry = hd(case_entry["suites"])
+      assert suite_entry["metrics"]["p50_microseconds"] != nil
+      assert suite_entry["metrics"]["memory_p95_bytes"] != nil
     end
   end
 

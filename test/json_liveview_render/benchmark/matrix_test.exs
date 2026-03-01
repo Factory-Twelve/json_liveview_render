@@ -54,4 +54,63 @@ defmodule JsonLiveviewRender.Benchmark.MatrixTest do
 
     assert default_render_seed_pairs == render_only_seed_pairs
   end
+
+  test "matrix configs pin each case to its originating suite" do
+    case_suite_pairs =
+      Config.from_options(seed: 111, suites: [:validate, :render])
+      |> Matrix.configs_for()
+      |> Enum.map(&{&1.case_name, &1.suites})
+
+    assert case_suite_pairs == [
+             {"validate_small_depth_4_width_2_nodes_15", [:validate]},
+             {"validate_typical_depth_5_width_4_nodes_341", [:validate]},
+             {"validate_pathological_depth_6_width_4_nodes_1024", [:validate]},
+             {"depth_4_width_2", [:render]},
+             {"depth_4_width_4", [:render]},
+             {"depth_5_width_2", [:render]},
+             {"depth_5_width_4", [:render]},
+             {"depth_6_width_4_nodes_1024", [:render]}
+           ]
+  end
+
+  test "matrix case seeds stay stable across suite selections and order" do
+    seed = 222
+
+    combined =
+      Config.from_options(seed: seed, suites: [:validate, :render])
+      |> Matrix.configs_for()
+      |> Map.new(&{&1.case_name, &1.seed})
+
+    reversed =
+      Config.from_options(seed: seed, suites: [:render, :validate])
+      |> Matrix.configs_for()
+      |> Map.new(&{&1.case_name, &1.seed})
+
+    validate_only =
+      Config.from_options(seed: seed, suites: [:validate])
+      |> Matrix.configs_for()
+      |> Map.new(&{&1.case_name, &1.seed})
+
+    render_only =
+      Config.from_options(seed: seed, suites: [:render])
+      |> Matrix.configs_for()
+      |> Map.new(&{&1.case_name, &1.seed})
+
+    assert combined["validate_small_depth_4_width_2_nodes_15"] ==
+             validate_only["validate_small_depth_4_width_2_nodes_15"]
+
+    assert combined["validate_typical_depth_5_width_4_nodes_341"] ==
+             validate_only["validate_typical_depth_5_width_4_nodes_341"]
+
+    assert combined["validate_pathological_depth_6_width_4_nodes_1024"] ==
+             validate_only["validate_pathological_depth_6_width_4_nodes_1024"]
+
+    assert combined["depth_4_width_2"] == render_only["depth_4_width_2"]
+    assert combined["depth_4_width_4"] == render_only["depth_4_width_4"]
+    assert combined["depth_5_width_2"] == render_only["depth_5_width_2"]
+    assert combined["depth_5_width_4"] == render_only["depth_5_width_4"]
+    assert combined["depth_6_width_4_nodes_1024"] == render_only["depth_6_width_4_nodes_1024"]
+
+    assert combined == reversed
+  end
 end

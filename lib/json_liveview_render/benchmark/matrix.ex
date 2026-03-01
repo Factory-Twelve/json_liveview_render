@@ -94,11 +94,11 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
     |> Enum.uniq()
     |> Enum.flat_map(fn suite ->
       case_definitions_for_suite(suite)
-      |> Enum.with_index(fn case_opts, suite_index ->
+      |> Enum.with_index(fn case_opts, case_index ->
         [
           iterations: base_config.iterations,
-          suites: base_config.suites,
-          seed: base_config.seed + suite_index,
+          suites: [suite],
+          seed: base_config.seed + case_index,
           node_count: case_opts.node_count,
           depth: case_opts.depth,
           branching_factor: case_opts.branching_factor,
