@@ -255,6 +255,25 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
       assert {:ok, _} = Spec.validate(fixed, Catalog)
     end
 
+    test "preserves boolean false root and matches stringified element id" do
+      spec = %{
+        "root" => false,
+        "elements" => %{
+          "false" => %{
+            "type" => "metric",
+            "props" => %{"label" => "Rev", "value" => "$1"},
+            "children" => []
+          }
+        }
+      }
+
+      {:ok, fixed, fixes} = Spec.auto_fix(spec, Catalog)
+
+      assert fixed["root"] == "false"
+      refute Enum.any?(fixes, &String.starts_with?(&1, "warning:"))
+      assert {:ok, _} = Spec.validate(fixed, Catalog)
+    end
+
     test "detects unreachable elements" do
       spec = %{
         "root" => "metric_1",

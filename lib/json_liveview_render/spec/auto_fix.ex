@@ -23,8 +23,8 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
   """
   @spec auto_fix(map(), module()) :: {:ok, map(), [fix()]} | {:error, term()}
   def auto_fix(spec, catalog) when is_map(spec) do
-    root = Map.get(spec, "root") || Map.get(spec, :root)
-    elements = Map.get(spec, "elements") || Map.get(spec, :elements)
+    root = get_dual_key(spec, "root", :root)
+    elements = get_dual_key(spec, "elements", :elements)
 
     cond do
       is_nil(elements) or not is_map(elements) ->
@@ -43,6 +43,14 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
 
         fixed_spec = %{"root" => root, "elements" => fixed_elements}
         {:ok, fixed_spec, fixes ++ orphan_warnings}
+    end
+  end
+
+  defp get_dual_key(map, string_key, atom_key) do
+    if Map.has_key?(map, string_key) do
+      Map.get(map, string_key)
+    else
+      Map.get(map, atom_key)
     end
   end
 
