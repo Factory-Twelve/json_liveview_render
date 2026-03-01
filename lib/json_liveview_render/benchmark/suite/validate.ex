@@ -13,13 +13,11 @@ defmodule JsonLiveviewRender.Benchmark.Suite.Validate do
         raise "benchmark validate suite failed: spec validation returned errors: #{inspect(reasons)}"
     end
 
-    %{
-      metrics:
-        Metrics.measure(config.iterations, fn ->
-          JsonLiveviewRender.Spec.validate(context.spec, JsonLiveviewRender.Benchmark.Catalog)
-        end),
-      name: "validate",
-      status: :ok
-    }
+    metrics =
+      Metrics.measure(config.iterations, fn ->
+        JsonLiveviewRender.Spec.validate(context.spec, JsonLiveviewRender.Benchmark.Catalog)
+      end)
+
+    %{metrics: metrics, name: "validate", status: :ok}
   end
 end
