@@ -26,7 +26,7 @@ defmodule JsonLiveviewRender.Benchmark.Guardrail do
 
   @spec default_thresholds_path() :: String.t()
   def default_thresholds_path do
-    Path.expand("benchmarks/thresholds.json", File.cwd!())
+    Path.expand("../../../benchmarks/thresholds.json", __DIR__)
   end
 
   @spec load_thresholds(String.t()) :: thresholds()
