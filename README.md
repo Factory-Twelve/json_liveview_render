@@ -462,6 +462,10 @@ make ci-local-full    # full matrix parity
 
 ## Benchmark Harness
 
+Canonical benchmark run/read/compare documentation lives in
+[`docs/perf.md`](./docs/perf.md). Use that runbook for reproducibility notes,
+machine caveats, warm-up guidance, and baseline/last-run reporting formats.
+
 Run benchmarks for deterministic validate/render workloads with no manual setup:
 
 ```bash
