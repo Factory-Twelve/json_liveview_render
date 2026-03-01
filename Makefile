@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help ci-local ci-local-full release-check
+.PHONY: help ci-local ci-local-full release-check benchmark benchmark-ci
 
 help:
 	@echo "Available targets:"
@@ -14,6 +14,12 @@ release-check:
 	mix compile --warnings-as-errors
 	MIX_PUBSUB=0 mix test
 	mix hex.publish --dry-run
+
+benchmark:
+	./scripts/benchmark.sh
+
+benchmark-ci:
+	CI=true ./scripts/benchmark.sh --format json
 
 ci-local:
 	./scripts/ci_local.sh --matrix 1.15

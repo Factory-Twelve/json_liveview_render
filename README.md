@@ -456,6 +456,35 @@ make ci-local         # cheapest matrix slot
 make ci-local-full    # full matrix parity
 ```
 
+## Benchmark Harness
+
+Run benchmarks for deterministic validate/render workloads with no manual setup:
+
+```bash
+make benchmark
+```
+
+That command uses `scripts/benchmark.sh`, which runs:
+
+- local default output (`text`) for developer-facing visibility
+- JSON output in CI (`CI=true`)
+
+You can also call the task directly:
+
+```bash
+mix json_liveview_render.bench
+
+# common options
+mix json_liveview_render.bench --iterations 500 --suites validate,render --seed 2026_03_01
+mix json_liveview_render.bench --format json --sections 24 --columns 3 --metrics-per-column 10
+```
+
+Current report output includes:
+
+- benchmark configuration (iterations, suites, seed, shape)
+- project/runtime metadata (Elixir, OTP, OS, scheduler/slice counts)
+- timing metrics per suite (min/max/mean/p95/p99)
+
 ## Learnings
 
 - See [LEARNINGS.md](./LEARNINGS.md) for implementation learnings and follow-up risks.
