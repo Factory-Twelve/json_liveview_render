@@ -4,6 +4,7 @@ defmodule JsonLiveviewRender.Catalog.Primitives do
   alias JsonLiveviewRender.Catalog.ComponentDef
   alias JsonLiveviewRender.Catalog.PropDef
 
+  @doc "Returns the built-in primitive components (row, column, section, grid)."
   @spec components() :: %{optional(atom()) => ComponentDef.t()}
   def components do
     %{

@@ -19,7 +19,25 @@ defmodule JsonLiveviewRender.Catalog do
   alias JsonLiveviewRender.Catalog.PropDef
   alias JsonLiveviewRender.Catalog.Primitives
 
-  @doc "Returns sorted component types from a catalog module."
+  @doc """
+  Returns sorted component types from a catalog module.
+
+  ## Examples
+
+      iex> defmodule DocTestCatalog.Types do
+      ...>   use JsonLiveviewRender.Catalog, include_primitives: false
+      ...>   component :beta do
+      ...>     description "B"
+      ...>     prop :x, :string
+      ...>   end
+      ...>   component :alpha do
+      ...>     description "A"
+      ...>     prop :y, :string
+      ...>   end
+      ...> end
+      iex> JsonLiveviewRender.Catalog.types(DocTestCatalog.Types)
+      [:alpha, :beta]
+  """
   @spec types(module()) :: [atom()]
   def types(catalog_module), do: catalog_module.components() |> Map.keys() |> Enum.sort()
 

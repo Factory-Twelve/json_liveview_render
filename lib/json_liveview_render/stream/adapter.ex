@@ -17,14 +17,17 @@ defmodule JsonLiveviewRender.Stream.Adapter do
 
   @type normalized :: {:ok, JsonLiveviewRender.Stream.event()} | :ignore | {:error, term()}
 
+  @doc "Converts a provider-specific payload map into a stream event tuple."
   @callback normalize_event(map()) :: normalized()
 
   @tool_name "json_liveview_render_event"
 
   @doc "The canonical tool name used by all adapters."
+  @spec tool_name() :: String.t()
   def tool_name, do: @tool_name
 
   @doc "Check if a value matches the canonical tool name."
+  @spec tool_name?(term()) :: boolean()
   def tool_name?(name) do
     case to_string_safe(name) do
       {:ok, @tool_name} -> true
@@ -33,6 +36,7 @@ defmodule JsonLiveviewRender.Stream.Adapter do
   end
 
   @doc "Get a value from a map that may have string or atom keys."
+  @spec get_value(map(), String.t()) :: term() | nil
   def get_value(map, key) when is_map(map) and is_binary(key) do
     case Map.fetch(map, key) do
       {:ok, value} ->
@@ -47,6 +51,7 @@ defmodule JsonLiveviewRender.Stream.Adapter do
   end
 
   @doc "Safely convert a value to string. Returns `{:ok, string}` or `:error`."
+  @spec to_string_safe(term()) :: {:ok, String.t()} | :error
   def to_string_safe(value) when is_binary(value), do: {:ok, value}
 
   def to_string_safe(value) when is_atom(value) and not is_nil(value),
@@ -56,6 +61,7 @@ defmodule JsonLiveviewRender.Stream.Adapter do
   def to_string_safe(_), do: :error
 
   @doc "Recursively normalize map keys to strings. Returns error for non-stringifiable keys."
+  @spec normalize_keys(term()) :: {:ok, term()} | {:error, term()}
   def normalize_keys(map) when is_map(map) do
     Enum.reduce_while(Map.to_list(map), {:ok, %{}}, fn {k, v}, {:ok, acc} ->
       with {:ok, str_k} <- stringify_key(k),

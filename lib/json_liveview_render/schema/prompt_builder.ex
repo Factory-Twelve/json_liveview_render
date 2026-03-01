@@ -1,5 +1,5 @@
 defmodule JsonLiveviewRender.Schema.PromptBuilder do
-  @moduledoc false
+  @moduledoc "Builds structured prompt text from a catalog module (internal, called via `Schema.to_prompt/1`)."
 
   alias JsonLiveviewRender.Catalog.ComponentDef
   alias JsonLiveviewRender.Catalog.PropDef

@@ -19,10 +19,55 @@ defmodule JsonLiveviewRender.Spec do
 
   @type validation_result :: {:ok, map()} | {:error, [term()]}
 
+  @doc """
+  Auto-fixes common AI mistakes in a spec (prop coercion, children normalization).
+
+      iex> defmodule DocCatalog2 do
+      ...>   use JsonLiveviewRender.Catalog
+      ...>   component :metric do
+      ...>     description "KPI"
+      ...>     prop :label, :string, required: true
+      ...>     prop :value, :integer, required: true
+      ...>   end
+      ...> end
+      iex> spec = %{"root" => "m", "elements" => %{"m" => %{"type" => "metric", "props" => %{"label" => "Rev", "value" => "42"}, "children" => []}}}
+      iex> {:ok, fixed, fixes} = JsonLiveviewRender.Spec.auto_fix(spec, DocCatalog2)
+      iex> fixed["elements"]["m"]["props"]["value"]
+      42
+      iex> length(fixes) > 0
+      true
+  """
   defdelegate auto_fix(spec, catalog), to: AutoFix
+
+  @doc """
+  Formats validation errors into a human-readable string for AI re-prompting.
+
+      iex> errors = [{:root_missing, "spec must include a root key"}]
+      iex> result = JsonLiveviewRender.Spec.format_errors(errors)
+      iex> result =~ "root key"
+      true
+  """
   defdelegate format_errors(errors), to: Errors
   defdelegate format_errors(errors, catalog), to: Errors
 
+  @doc """
+  Validates a UI spec against a component catalog (strict mode).
+
+  Returns `{:ok, normalized_spec}` or `{:error, reasons}`.
+
+      iex> defmodule DocCatalog1 do
+      ...>   use JsonLiveviewRender.Catalog
+      ...>   component :metric do
+      ...>     description "KPI"
+      ...>     prop :label, :string, required: true
+      ...>     prop :value, :string, required: true
+      ...>   end
+      ...> end
+      iex> spec = %{"root" => "m", "elements" => %{"m" => %{"type" => "metric", "props" => %{"label" => "Rev", "value" => "$1"}, "children" => []}}}
+      iex> {:ok, _} = JsonLiveviewRender.Spec.validate(spec, DocCatalog1)
+      iex> bad = %{"root" => "m", "elements" => %{"m" => %{"type" => "nope", "props" => %{}, "children" => []}}}
+      iex> {:error, [{:unknown_component, _}]} = JsonLiveviewRender.Spec.validate(bad, DocCatalog1)
+  """
   @spec validate(map() | String.t(), module()) :: validation_result()
   def validate(spec, catalog), do: validate(spec, catalog, strict: true)
 
@@ -42,6 +87,7 @@ defmodule JsonLiveviewRender.Spec do
     validate(spec, catalog, opts)
   end
 
+  @doc "Validates a UI spec with explicit options (`:strict`, `:allow_missing_root`, `:allow_unresolved_children`)."
   @spec validate(map() | String.t(), module(), keyword()) :: validation_result()
   def validate(spec, catalog, opts) when is_list(opts) do
     strict? = Keyword.get(opts, :strict, true)
@@ -61,10 +107,12 @@ defmodule JsonLiveviewRender.Spec do
     end
   end
 
+  @doc "Validates a single element against the catalog (strict mode)."
   @spec validate_element(String.t(), map(), module()) :: :ok | {:error, term()}
   def validate_element(id, element, catalog),
     do: validate_element(id, element, catalog, strict: true)
 
+  @doc "Validates a single element with explicit options."
   @spec validate_element(String.t(), map(), module(), keyword()) :: :ok | {:error, term()}
   def validate_element(id, element, catalog, opts) when is_map(element) do
     strict? = Keyword.get(opts, :strict, true)

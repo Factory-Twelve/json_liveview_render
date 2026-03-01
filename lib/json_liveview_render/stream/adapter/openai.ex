@@ -24,6 +24,8 @@ defmodule JsonLiveviewRender.Stream.Adapter.OpenAI do
 
   @tool_name Adapter.tool_name()
 
+  @doc "Converts an OpenAI function-call payload into a stream event."
+  @spec normalize_event(term()) :: JsonLiveviewRender.Stream.Adapter.normalized()
   @impl true
   def normalize_event(payload) when is_map(payload) do
     case event_type(payload) do

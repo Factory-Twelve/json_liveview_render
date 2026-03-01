@@ -19,6 +19,10 @@ defmodule JsonLiveviewRender.Permissions do
           deny_roles: [term()]
         }
 
+  @doc """
+  Removes unauthorized elements from a spec by consulting the catalog's
+  permission metadata and the given `authorizer`.
+  """
   @spec filter(map(), term(), module(), module() | (term(), term() -> boolean())) :: map()
   def filter(%{"root" => root, "elements" => elements} = spec, current_user, catalog, authorizer)
       when is_map(elements) do

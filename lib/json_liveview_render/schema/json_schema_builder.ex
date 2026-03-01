@@ -1,5 +1,5 @@
 defmodule JsonLiveviewRender.Schema.JSONSchemaBuilder do
-  @moduledoc false
+  @moduledoc "Builds JSON Schema output from a catalog module (internal, called via `Schema.to_json_schema/1`)."
 
   alias JsonLiveviewRender.Catalog.ComponentDef
   alias JsonLiveviewRender.Catalog.PropDef

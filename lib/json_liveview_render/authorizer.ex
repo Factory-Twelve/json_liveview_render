@@ -1,6 +1,7 @@
 defmodule JsonLiveviewRender.Authorizer do
   @moduledoc "Behavior for app-provided authorization used during rendering."
 
+  @doc "Returns `true` if `current_user` satisfies the `required_role` for a component."
   @callback allowed?(current_user :: term(), required_role :: term()) :: boolean()
 end
 

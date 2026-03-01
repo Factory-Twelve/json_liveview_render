@@ -22,6 +22,8 @@ defmodule JsonLiveviewRender.Stream.Adapter.Anthropic do
 
   alias JsonLiveviewRender.Stream.Adapter
 
+  @doc "Converts an Anthropic `tool_use` or `content_block_stop` payload into a stream event."
+  @spec normalize_event(term()) :: JsonLiveviewRender.Stream.Adapter.normalized()
   @impl true
   def normalize_event(payload) when is_map(payload) do
     case event_type(payload) do

@@ -3,6 +3,24 @@ defmodule JsonLiveviewRender.Debug do
 
   alias JsonLiveviewRender.Spec
 
+  @doc """
+  Validates a spec and returns a diagnostic report with tree metrics.
+
+  ## Examples
+
+      iex> defmodule DebugDocCatalog do
+      ...>   use JsonLiveviewRender.Catalog
+      ...>   component :metric do
+      ...>     description "KPI"
+      ...>     prop :label, :string, required: true
+      ...>     prop :value, :string, required: true
+      ...>   end
+      ...> end
+      iex> spec = %{"root" => "m", "elements" => %{"m" => %{"type" => "metric", "props" => %{"label" => "Rev", "value" => "$1"}, "children" => []}}}
+      iex> {:ok, report} = JsonLiveviewRender.Debug.inspect_spec(spec, DebugDocCatalog)
+      iex> Map.keys(report) |> Enum.sort()
+      [:component_counts, :element_count, :leaf_ids, :max_depth, :orphan_ids, :reachable_count, :root, :spec]
+  """
   @spec inspect_spec(map() | String.t(), module(), keyword()) ::
           {:ok, map()} | {:error, [term()]}
   def inspect_spec(spec, catalog, opts \\ []) do

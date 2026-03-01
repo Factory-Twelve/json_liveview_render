@@ -50,9 +50,41 @@ defmodule JsonLiveviewRender.Stream do
           complete?: boolean()
         }
 
+  @doc """
+  Returns an empty stream accumulator.
+
+  ## Examples
+
+      iex> JsonLiveviewRender.Stream.new()
+      %{root: nil, elements: %{}, complete?: false}
+  """
   @spec new() :: t()
   def new, do: %{root: nil, elements: %{}, complete?: false}
 
+  @doc """
+  Applies a single stream event to the accumulator.
+
+  Events are validated against the catalog before being accepted.
+  See the module doc for the full transition contract.
+
+  ## Examples
+
+      iex> defmodule DocTestCatalog.StreamIngest do
+      ...>   use JsonLiveviewRender.Catalog, include_primitives: false
+      ...>   component :metric do
+      ...>     description "KPI"
+      ...>     prop :label, :string, required: true
+      ...>     prop :value, :string, required: true
+      ...>   end
+      ...> end
+      iex> stream = JsonLiveviewRender.Stream.new()
+      iex> {:ok, stream} = JsonLiveviewRender.Stream.ingest(stream, {:root, "m1"}, DocTestCatalog.StreamIngest)
+      iex> {:ok, stream} = JsonLiveviewRender.Stream.ingest(stream, {:element, "m1", %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}}, DocTestCatalog.StreamIngest)
+      iex> stream.root
+      "m1"
+      iex> Map.has_key?(stream.elements, "m1")
+      true
+  """
   @spec ingest(t(), event(), module(), keyword()) :: {:ok, t()} | {:error, term()}
   def ingest(stream, event, catalog, opts \\ []),
     do: process_transition(stream, event, catalog, opts)
@@ -118,6 +150,7 @@ defmodule JsonLiveviewRender.Stream do
   defp process_transition(_stream, event, _catalog, _opts),
     do: {:error, {:invalid_stream_event, event}}
 
+  @doc "Applies a list of events in order, halting on the first error."
   @spec ingest_many(t(), [event()], module(), keyword()) :: {:ok, t()} | {:error, term(), t()}
   def ingest_many(stream, events, catalog, opts \\ []) when is_list(events) and is_list(opts) do
     Enum.reduce_while(events, {:ok, stream}, fn event, {:ok, acc} ->
@@ -148,6 +181,7 @@ defmodule JsonLiveviewRender.Stream do
     end
   end
 
+  @doc "Converts the accumulated stream state into a spec map."
   @spec to_spec(t()) :: map()
   def to_spec(stream) do
     %{"root" => stream.root, "elements" => stream.elements}

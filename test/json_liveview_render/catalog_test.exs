@@ -1,6 +1,8 @@
 defmodule JsonLiveviewRender.CatalogTest do
   use ExUnit.Case, async: true
 
+  doctest JsonLiveviewRender.Catalog
+
   alias JsonLiveviewRender.Catalog, as: CatalogAPI
   alias JsonLiveviewRenderTest.Fixtures.Catalog
 

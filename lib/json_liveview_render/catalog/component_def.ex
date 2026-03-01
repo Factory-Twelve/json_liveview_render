@@ -82,29 +82,35 @@ defmodule JsonLiveviewRender.Catalog.ComponentDef do
           permission: term() | nil
         }
 
+  @doc "Creates a new component definition with the given name."
   @spec new(atom()) :: t()
   def new(name) when is_atom(name), do: %__MODULE__{name: name}
 
+  @doc "Sets the human-readable description on a component definition."
   @spec put_description(t(), String.t()) :: t()
   def put_description(component, description) when is_binary(description) do
     %{component | description: description}
   end
 
+  @doc "Adds or replaces a prop definition on the component."
   @spec put_prop(t(), PropDef.t()) :: t()
   def put_prop(component, %PropDef{name: prop_name} = prop) do
     %{component | props: Map.put(component.props, prop_name, prop)}
   end
 
+  @doc "Appends a named slot to the component's slot list (deduplicated)."
   @spec put_slot(t(), atom()) :: t()
   def put_slot(component, slot_name) when is_atom(slot_name) do
     %{component | slots: Enum.uniq(component.slots ++ [slot_name])}
   end
 
+  @doc "Sets the required permission role for the component."
   @spec put_permission(t(), term()) :: t()
   def put_permission(component, required_role) do
     %{component | permission: required_role}
   end
 
+  @doc "Returns sorted prop names for the component."
   @spec prop_names(t()) :: [atom()]
   def prop_names(component), do: component.props |> Map.keys() |> Enum.sort()
 end

@@ -4,9 +4,14 @@ defmodule JsonLiveviewRender.Bindings do
   alias JsonLiveviewRender.Catalog.PropDef
   alias JsonLiveviewRender.Bindings.Error
 
+  @doc "Resolves `*_binding` props by looking up values in `bindings`. Delegates to `resolve_props/3`."
   @spec resolve_props(map(), map()) :: map()
   def resolve_props(props, bindings), do: resolve_props(props, bindings, [])
 
+  @doc """
+  Resolves `*_binding` props from `bindings` and optionally validates types
+  against `prop_defs` when `:check_types` is true.
+  """
   @spec resolve_props(map(), map(), keyword()) :: map()
   def resolve_props(props, bindings, opts)
       when is_map(props) and is_map(bindings) and is_list(opts) do
