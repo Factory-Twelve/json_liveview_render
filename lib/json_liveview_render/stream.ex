@@ -35,6 +35,7 @@ defmodule JsonLiveviewRender.Stream do
   """
 
   alias JsonLiveviewRender.Spec
+  alias JsonLiveviewRender.Spec.Normalizer
 
   @type event :: {:root, String.t()} | {:element, String.t(), map()} | {:finalize}
   @type transition_error ::
@@ -83,7 +84,7 @@ defmodule JsonLiveviewRender.Stream do
       {:error, {:element_already_exists, id}}
     else
       strict? = Keyword.get(opts, :strict, true)
-      normalized = normalize_stream_element(element)
+      normalized = Normalizer.normalize_element(element)
 
       case Spec.validate_element(id, normalized, catalog, strict: strict?) do
         :ok ->
@@ -152,30 +153,4 @@ defmodule JsonLiveviewRender.Stream do
     %{"root" => stream.root, "elements" => stream.elements}
   end
 
-  defp normalize_stream_element(element) do
-    type = Map.get(element, "type") || Map.get(element, :type)
-    props = Map.get(element, "props", Map.get(element, :props, %{}))
-    children = Map.get(element, "children", Map.get(element, :children, []))
-
-    %{
-      "type" => if(is_atom(type), do: Atom.to_string(type), else: type),
-      "props" => normalize_map_keys(props),
-      "children" => normalize_children(children)
-    }
-  end
-
-  defp normalize_map_keys(map) when is_map(map) do
-    Map.new(map, fn {k, v} -> {stringify_key(k), v} end)
-  end
-
-  defp normalize_map_keys(value), do: value
-
-  defp normalize_children(children) when is_list(children), do: Enum.map(children, &to_string/1)
-  defp normalize_children(value), do: value
-
-  defp stringify_key(key) do
-    to_string(key)
-  rescue
-    _ -> inspect(key)
-  end
 end

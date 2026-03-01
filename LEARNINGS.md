@@ -58,3 +58,9 @@ Updated: 2026-02-25
 ### FAC-74: Benchmark: deterministic catalog/spec generator
 - Tests: passed
 - PR: https://github.com/Factory-Twelve/json_liveview_render/pull/19
+
+## 2026-03-01
+
+### FAC-76: Benchmark: docs and run reproducibility notes
+- Tests: passed
+- PR: https://github.com/Factory-Twelve/json_liveview_render/pull/30

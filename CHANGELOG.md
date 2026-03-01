@@ -5,6 +5,9 @@
 ### Non-released
 - Items here are still in progress, exploratory, or waiting for confirmation.
 - Keep non-release work here until it is intentionally prepared for the next release.
+- Added `Spec.auto_fix/2` for automatic correction of common AI mistakes in generated specs (string→integer/float/boolean coercion, single-string children wrapping, orphan element detection).
+- Added `Spec.format_errors/1,2` for formatting validation errors into human-readable strings suitable for AI re-prompting; catalog-enriched variant appends available component types for unknown_component errors.
+- Added opt-in `error_boundary` attribute to `JsonLiveviewRender.Renderer` — when enabled, elements that raise during rendering are caught, logged, and silently removed so siblings continue to render.
 
 ### Release-ready
 - Items here are the release draft for the next version bump.

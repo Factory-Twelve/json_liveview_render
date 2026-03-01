@@ -30,4 +30,34 @@ defmodule JsonLiveviewRender.Spec.Errors do
     {:invalid_prop_type,
      "element #{inspect(id)} prop #{inspect(prop)} expected #{inspect(expected)}, got #{inspect(actual)}"}
   end
+
+  @doc """
+  Formats a list of validation errors into a human-readable string suitable
+  for feeding back to an AI for re-prompting.
+  """
+  @spec format_errors([term()]) :: String.t()
+  def format_errors(errors) when is_list(errors) do
+    lines = Enum.map(errors, &format_error_tuple/1)
+    "The generated UI spec has the following errors:\n" <> Enum.join(lines, "\n")
+  end
+
+  @doc """
+  Formats validation errors with catalog context. `:unknown_component` errors
+  are enriched with the list of available component types from the catalog.
+  """
+  @spec format_errors([term()], module()) :: String.t()
+  def format_errors(errors, catalog) when is_list(errors) do
+    lines = Enum.map(errors, &format_error_tuple(&1, catalog))
+    "The generated UI spec has the following errors:\n" <> Enum.join(lines, "\n")
+  end
+
+  defp format_error_tuple({:unknown_component, _msg} = error, catalog) do
+    available = catalog.types() |> Enum.map(&to_string/1) |> Enum.join(", ")
+    "- " <> elem(error, 1) <> " (available types: #{available})"
+  end
+
+  defp format_error_tuple(error, _catalog), do: format_error_tuple(error)
+
+  defp format_error_tuple({_tag, message}) when is_binary(message), do: "- " <> message
+  defp format_error_tuple(other), do: "- " <> inspect(other)
 end

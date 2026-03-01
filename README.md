@@ -22,6 +22,7 @@ JsonLiveviewRender tracks behavior by release family with an explicit v0.3 scope
 | Schema (`JsonLiveviewRender.Schema`) | ✅ In scope | | |
 | Bindings (`JsonLiveviewRender.Bindings`) | ✅ In scope | | |
 | Debug (`JsonLiveviewRender.Debug`) | ✅ In scope | | |
+| Spec auto-fix & error formatting (`Spec.auto_fix`, `Spec.format_errors`) | | ✅ In scope | |
 | Stream API (`JsonLiveviewRender.Stream`) | | ✅ In scope | |
 | Partial validation/rendering (`validate_partial`, `allow_partial`) | | ✅ In scope | |
 | Streaming adapters (`JsonLiveviewRender.Stream.Adapter.*`) | | | ✅ Deferred to companion package path |
@@ -99,6 +100,44 @@ case JsonLiveviewRender.Spec.validate(spec, MyApp.UICatalog) do
     Logger.warning("Invalid spec: #{inspect(reasons)}")
 end
 ```
+
+## AI Error Handling (v0.3 candidate)
+
+Auto-fix common AI mistakes before validation, and format errors for AI re-prompting:
+
+```elixir
+# Fix common AI mistakes (string→integer coercion, single-string children, etc.)
+{:ok, fixed_spec, fixes} = JsonLiveviewRender.Spec.auto_fix(raw_spec, MyApp.UICatalog)
+
+# fixes is a list of human-readable descriptions, e.g.:
+# ["element \"metric_1\" prop \"count\": coerced \"42\" to integer 42"]
+
+# Then validate as normal
+case JsonLiveviewRender.Spec.validate(fixed_spec, MyApp.UICatalog) do
+  {:ok, spec} ->
+    # render...
+
+  {:error, errors} ->
+    # Format errors for sending back to the AI
+    prompt = JsonLiveviewRender.Spec.format_errors(errors, MyApp.UICatalog)
+    # => "The generated UI spec has the following errors:\n- element \"card_1\" references unknown component \"Cardx\" (available types: card, metric, text)"
+end
+```
+
+Enable per-element error boundaries so a single broken element doesn't crash the whole render:
+
+```elixir
+<JsonLiveviewRender.Renderer.render
+  spec={@spec}
+  catalog={MyApp.UICatalog}
+  registry={MyApp.UIRegistry}
+  bindings={@bindings}
+  current_user={@current_user}
+  error_boundary={true}
+/>
+```
+
+When `error_boundary` is enabled, elements that raise during rendering are silently removed (with a `Logger.warning`) and their siblings continue to render.
 
 ## Data Binding (v0.2 Core)
 

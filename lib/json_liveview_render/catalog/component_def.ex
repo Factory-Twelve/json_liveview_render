@@ -33,6 +33,31 @@ defmodule JsonLiveviewRender.Catalog.PropDef do
           validator: (term() -> boolean()) | nil,
           binding_type: prop_type() | nil
         }
+
+  @doc "Returns true if `value` satisfies the type contract defined by `prop_def`."
+  @spec valid?(term(), t()) :: boolean()
+  def valid?(nil, %__MODULE__{required: false}), do: true
+  def valid?(nil, _), do: false
+  def valid?(value, %__MODULE__{type: :string}), do: is_binary(value)
+  def valid?(value, %__MODULE__{type: :integer}), do: is_integer(value)
+  def valid?(value, %__MODULE__{type: :float}), do: is_integer(value) or is_float(value)
+  def valid?(value, %__MODULE__{type: :boolean}), do: is_boolean(value)
+  def valid?(value, %__MODULE__{type: :map}), do: is_map(value)
+
+  def valid?(value, %__MODULE__{type: :enum, values: values}) do
+    values = values || []
+    value in values or to_string(value) in Enum.map(values, &to_string/1)
+  end
+
+  def valid?(value, %__MODULE__{type: {:list, inner}}) when is_list(value) do
+    Enum.all?(value, fn item -> valid?(item, %__MODULE__{name: :_item, type: inner}) end)
+  end
+
+  def valid?(value, %__MODULE__{type: :custom, validator: validator})
+       when is_function(validator, 1),
+       do: validator.(value)
+
+  def valid?(_value, _prop), do: false
 end
 
 defmodule JsonLiveviewRender.Catalog.ComponentDef do
