@@ -196,7 +196,7 @@ defmodule JsonLiveviewRender.Benchmark.Config do
   defp normalize_suite(:render), do: :render
   defp normalize_suite(value), do: raise(ArgumentError, "invalid suite: #{inspect(value)}")
 
-  defp validate_positive_integer!(key, value) when is_integer(value) and value > 0, do: :ok
+  defp validate_positive_integer!(_key, value) when is_integer(value) and value > 0, do: :ok
 
   defp validate_positive_integer!(key, value) do
     raise ArgumentError, "expected #{key} to be a positive integer, got: #{inspect(value)}"
