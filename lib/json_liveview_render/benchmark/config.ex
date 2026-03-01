@@ -109,15 +109,23 @@ defmodule JsonLiveviewRender.Benchmark.Config do
   defp normalize_suites(value) when is_binary(value) do
     value
     |> String.split(",", trim: true)
+    |> validate_non_empty_suites!()
     |> Enum.map(&normalize_suite/1)
   end
 
   defp normalize_suites(value) when is_list(value) do
-    Enum.map(value, &normalize_suite/1)
+    value
+    |> validate_non_empty_suites!()
+    |> Enum.map(&normalize_suite/1)
   end
 
   defp normalize_suites(value),
     do: raise(ArgumentError, "invalid suites value: #{inspect(value)}")
+
+  defp validate_non_empty_suites!([]),
+    do: raise(ArgumentError, "expected at least one suite, got: []")
+
+  defp validate_non_empty_suites!(suites), do: suites
 
   defp normalize_suite("validate"), do: :validate
   defp normalize_suite("render"), do: :render
