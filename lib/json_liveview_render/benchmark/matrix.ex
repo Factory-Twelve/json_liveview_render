@@ -43,7 +43,7 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
   def configs_for(%Config{} = base_config) do
     case_definitions()
     |> Enum.with_index(fn case_opts, index ->
-      %{
+      [
         iterations: base_config.iterations,
         suites: base_config.suites,
         seed: base_config.seed + index,
@@ -51,13 +51,10 @@ defmodule JsonLiveviewRender.Benchmark.Matrix do
         depth: case_opts.depth,
         branching_factor: case_opts.branching_factor,
         ci: base_config.ci,
-        format: base_config.format
-      }
-      |> then(fn options ->
-        base_config
-        |> Config.from_options(options)
-        |> Map.put(:case_name, case_opts.case_name)
-      end)
+        format: base_config.format,
+        case_name: case_opts.case_name
+      ]
+      |> Config.from_options()
     end)
   end
 

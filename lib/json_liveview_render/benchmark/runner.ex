@@ -159,7 +159,10 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
       "  iterations=",
       Integer.to_string(report.config.iterations),
       "\n",
-      if(report.config.case_name, do: ["  case_name=", report.config.case_name, "\n"], else: []),
+      if(Map.get(report.config, :case_name),
+        do: ["  case_name=", to_string(Map.get(report.config, :case_name)), "\n"],
+        else: []
+      ),
       "  suites=",
       Enum.join(report.config.suites, ","),
       "\n",
