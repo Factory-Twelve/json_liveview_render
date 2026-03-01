@@ -26,10 +26,14 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
 
   @impl true
   def run(argv) do
-    {parsed, _positionals, invalid} = OptionParser.parse(argv, switches: @switches)
+    {parsed, positionals, invalid} = OptionParser.parse(argv, switches: @switches)
 
     if invalid != [] do
       raise_invalid_args!(invalid)
+    end
+
+    if positionals != [] do
+      Mix.raise("unexpected positional argument(s): #{inspect(positionals)}")
     end
 
     parsed =
