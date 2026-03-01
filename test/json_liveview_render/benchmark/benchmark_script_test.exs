@@ -31,14 +31,14 @@ defmodule JsonLiveviewRender.Benchmark.BenchmarkScriptTest do
     end
   end
 
-  test "forces json format after user-provided flags in CI" do
+  test "enforces json output in CI regardless of user format flags" do
     with_stub_mix(fn script_path, args_path, tmp_dir ->
       env = [{"CI", "true"}, {"PATH", "#{tmp_dir}:#{System.get_env("PATH", "")}"}]
 
-      System.cmd("bash", [script_path, "--format", "text"], env: env)
+      System.cmd("bash", [script_path, "--iterations", "10", "--format", "text"], env: env)
 
       args = File.read!(args_path) |> String.split(~r/\r?\n/, trim: true)
-      assert args == ["json_liveview_render.bench", "--format", "text", "--format", "json"]
+      assert args == ["json_liveview_render.bench", "--iterations", "10", "--format", "json"]
     end)
   end
 

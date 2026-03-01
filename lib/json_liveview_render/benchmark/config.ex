@@ -108,19 +108,26 @@ defmodule JsonLiveviewRender.Benchmark.Config do
 
   defp normalize_suites(value) when is_binary(value) do
     value
-    |> String.split(",", trim: true)
-    |> validate_non_empty_suites!()
-    |> Enum.map(&normalize_suite/1)
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+      |> validate_non_empty_suites!()
+      |> Enum.map(&normalize_suite/1)
   end
 
   defp normalize_suites(value) when is_list(value) do
     value
-    |> validate_non_empty_suites!()
-    |> Enum.map(&normalize_suite/1)
+      |> Enum.map(&normalize_suite_input/1)
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> validate_non_empty_suites!()
+      |> Enum.map(&normalize_suite/1)
   end
 
   defp normalize_suites(value),
     do: raise(ArgumentError, "invalid suites value: #{inspect(value)}")
+
+  defp normalize_suite_input(value) when is_binary(value), do: String.trim(value)
+  defp normalize_suite_input(value), do: value
 
   defp validate_non_empty_suites!([]),
     do: raise(ArgumentError, "expected at least one suite, got: []")

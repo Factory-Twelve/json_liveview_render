@@ -15,5 +15,11 @@ defmodule JsonLiveviewRender.Benchmark.ConfigTest do
         Config.from_options(suites: [])
       end
     end
+
+    test "rejects whitespace-only suite list" do
+      assert_raise ArgumentError, ~r/expected at least one suite/, fn ->
+        Config.from_options(suites: "   ,   ")
+      end
+    end
   end
 end

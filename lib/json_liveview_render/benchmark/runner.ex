@@ -53,11 +53,19 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
     %{
       os_type: os_type,
       system_version: to_string(:erlang.system_info(:system_version)),
-      logical_processors: :erlang.system_info(:logical_processors_online),
+      logical_processors: logical_processor_count(),
       schedulers_online: :erlang.system_info(:schedulers_online),
       process_count: process_count(),
       word_size: word_size()
     }
+  end
+
+  defp logical_processor_count do
+    case :erlang.system_info(:logical_processors_online) do
+      value when is_integer(value) -> value
+      :unknown -> :unknown
+      _ -> :unknown
+    end
   end
 
   defp process_count do
