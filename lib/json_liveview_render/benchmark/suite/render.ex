@@ -17,7 +17,7 @@ defmodule JsonLiveviewRender.Benchmark.Suite.Render do
     end
 
     %{
-      metrics: Metrics.measure(config.iterations, render_fn),
+      metrics: Metrics.measure(config.iterations, render_fn, memory: true),
       name: "render",
       status: :ok
     }

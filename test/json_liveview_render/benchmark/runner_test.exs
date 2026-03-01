@@ -39,8 +39,10 @@ defmodule JsonLiveviewRender.Benchmark.RunnerTest do
             mean_microseconds: 333.3,
             min_microseconds: 250,
             max_microseconds: 450,
+            p50_microseconds: 300,
             p95_microseconds: 420,
-            p99_microseconds: 440
+            p99_microseconds: 440,
+            throughput_ops_per_second: 3000.0
           }
         }
       ]

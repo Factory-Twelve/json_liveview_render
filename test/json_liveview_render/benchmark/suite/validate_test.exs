@@ -20,9 +20,11 @@ defmodule JsonLiveviewRender.Benchmark.Suite.ValidateTest do
              metrics: metrics
            } = result
 
-    assert map_size(metrics) == 7
+    assert map_size(metrics) >= 8
     assert metrics.iterations == 1
     assert is_integer(metrics.total_microseconds)
     assert is_number(metrics.mean_microseconds)
+    assert is_integer(metrics.p50_microseconds)
+    assert is_float(metrics.throughput_ops_per_second)
   end
 end

@@ -91,6 +91,32 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
       Enum.map(report.suites, fn suite ->
         metrics = suite.metrics
 
+        memory_lines =
+          if Map.has_key?(metrics, :memory_total_bytes) do
+            [
+              "    memory_total_bytes=",
+              format_memory(metrics.memory_total_bytes),
+              "\n",
+              "    memory_mean_bytes=",
+              format_memory(metrics.memory_mean_bytes),
+              "\n",
+              "    memory_min_bytes=",
+              format_memory(metrics.memory_min_bytes),
+              "\n",
+              "    memory_max_bytes=",
+              format_memory(metrics.memory_max_bytes),
+              "\n",
+              "    memory_p50_bytes=",
+              format_memory(metrics.memory_p50_bytes),
+              "\n",
+              "    memory_p95_bytes=",
+              format_memory(metrics.memory_p95_bytes),
+              "\n"
+            ]
+          else
+            []
+          end
+
         [
           "  suite=",
           suite.name,
@@ -110,12 +136,19 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
           "    max_ms=",
           format_ms(metrics.max_microseconds),
           "\n",
+          "    p50_ms=",
+          format_ms(metrics.p50_microseconds),
+          "\n",
           "    p95_ms=",
           format_ms(metrics.p95_microseconds),
           "\n",
           "    p99_ms=",
           format_ms(metrics.p99_microseconds),
+          "\n",
+          "    throughput_ops_per_second=",
+          format_rate(metrics.throughput_ops_per_second),
           "\n"
+          | memory_lines
         ]
       end)
 
@@ -126,6 +159,7 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
       "  iterations=",
       Integer.to_string(report.config.iterations),
       "\n",
+      if(report.config.case_name, do: ["  case_name=", report.config.case_name, "\n"], else: []),
       "  suites=",
       Enum.join(report.config.suites, ","),
       "\n",
@@ -187,6 +221,16 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
     |> Float.round(3)
     |> :erlang.float_to_binary(decimals: 3)
   end
+
+  defp format_rate(value) when is_float(value) do
+    value
+    |> Float.round(3)
+    |> :erlang.float_to_binary(decimals: 3)
+  end
+
+  defp format_memory(value) when is_integer(value), do: Integer.to_string(value)
+  defp format_memory(value) when is_float(value), do: Float.to_string(Float.round(value, 3))
+  defp format_memory(value), do: to_string(value)
 
   defp metric_to_string(value) when is_integer(value), do: Integer.to_string(value)
   defp metric_to_string(value) when value in [:unknown, nil], do: "unknown"
