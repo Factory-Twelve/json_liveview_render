@@ -52,7 +52,7 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
     children = Map.get(element, "children", Map.get(element, :children, []))
 
     %{
-      "type" => if(is_atom(type), do: Atom.to_string(type), else: type),
+      "type" => if(is_atom(type) and not is_nil(type), do: Atom.to_string(type), else: type),
       "props" => Normalizer.normalize_props(props),
       "children" => children
     }
@@ -67,11 +67,11 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
     end)
   end
 
-  defp fix_element(id, %{"type" => type} = element, catalog) when is_binary(type) do
+  defp fix_element(id, %{"type" => type} = element, catalog) do
     {children, children_fixes} = fix_children(id, element)
     element = Map.put(element, "children", children)
 
-    case catalog.component(type) do
+    case lookup_component(catalog, type) do
       %ComponentDef{props: prop_defs} ->
         {fixed_props, prop_fixes} = fix_props(id, Map.get(element, "props", %{}), prop_defs)
         {Map.put(element, "props", fixed_props), children_fixes ++ prop_fixes}
@@ -81,12 +81,13 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
     end
   end
 
-  defp fix_element(id, %{"type" => _type} = element, _catalog) do
-    {children, children_fixes} = fix_children(id, element)
-    {Map.put(element, "children", children), children_fixes}
-  end
-
   defp fix_element(_id, element, _catalog), do: {element, []}
+
+  defp lookup_component(catalog, type)
+       when is_binary(type) or (is_atom(type) and not is_nil(type)),
+       do: catalog.component(type)
+
+  defp lookup_component(_catalog, _type), do: nil
 
   defp fix_children(id, element) do
     children = Map.get(element, "children", [])
@@ -216,10 +217,17 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
   end
 
   defp extract_children(elements, id) do
-    case Map.get(elements, id) do
-      %{"children" => children} when is_list(children) -> children
-      %{children: children} when is_list(children) -> children
+    elements
+    |> Map.get(id)
+    |> children_for_traversal()
+  end
+
+  defp children_for_traversal(%{} = element) do
+    case Map.get(element, "children", Map.get(element, :children, [])) do
+      children when is_list(children) -> children
       _ -> []
     end
   end
+
+  defp children_for_traversal(_element), do: []
 end

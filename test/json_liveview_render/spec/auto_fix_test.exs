@@ -342,9 +342,25 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
 
       {:ok, fixed, _fixes} = Spec.auto_fix(spec, Catalog)
 
-      # nil is an atom, so it gets stringified to "nil" during normalization
-      assert fixed["elements"]["m_1"]["type"] == "nil"
+      assert fixed["elements"]["m_1"]["type"] == nil
       assert fixed["elements"]["m_2"]["type"] == 123
+    end
+
+    test "handles missing type without calling catalog lookup" do
+      spec = %{
+        "root" => "m_1",
+        "elements" => %{
+          "m_1" => %{
+            "props" => %{"label" => "Rev"},
+            "children" => []
+          }
+        }
+      }
+
+      {:ok, fixed, fixes} = Spec.auto_fix(spec, Catalog)
+
+      assert fixed["elements"]["m_1"]["type"] == nil
+      assert fixes == []
     end
 
     test "handles malformed non-map root element during orphan traversal" do
@@ -364,6 +380,17 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
 
       assert fixed["elements"]["bad_root"] == 123
       assert Enum.any?(fixes, &String.contains?(&1, ~s("orphan_1")))
+    end
+
+    test "treats non-map reachable element as leaf during orphan traversal" do
+      spec = %{
+        "root" => "a",
+        "elements" => %{
+          "a" => 123
+        }
+      }
+
+      assert {:ok, %{"elements" => %{"a" => 123}}, []} = Spec.auto_fix(spec, Catalog)
     end
   end
 
