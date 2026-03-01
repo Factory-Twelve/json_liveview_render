@@ -18,12 +18,22 @@ defmodule JsonLiveviewRender.Spec.Normalizer do
 
   @spec normalize_props(map()) :: map()
   def normalize_props(props) when is_map(props) do
-    Map.new(props, fn {k, v} -> {to_string(k), v} end)
+    Map.new(props, fn {k, v} -> {safe_to_string(k), v} end)
   end
 
   def normalize_props(props), do: props
 
   @spec normalize_children(list()) :: list()
-  def normalize_children(children) when is_list(children), do: Enum.map(children, &to_string/1)
+  def normalize_children(children) when is_list(children) do
+    Enum.map(children, &safe_to_string/1)
+  end
+
   def normalize_children(children), do: children
+
+  @doc false
+  def safe_to_string(value) do
+    to_string(value)
+  rescue
+    _ -> inspect(value)
+  end
 end

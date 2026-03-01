@@ -92,7 +92,21 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
         {[c], [fix]}
 
       c when is_list(c) ->
-        {Enum.map(c, &to_string/1), []}
+        {coerced, dropped} =
+          Enum.reduce(c, {[], []}, fn item, {acc_ok, acc_dropped} ->
+            if is_binary(item) or is_atom(item) or is_number(item) do
+              {[to_string(item) | acc_ok], acc_dropped}
+            else
+              {acc_ok, [item | acc_dropped]}
+            end
+          end)
+
+        fixes =
+          Enum.map(Enum.reverse(dropped), fn item ->
+            ~s(element #{inspect(id)}: dropped non-string child #{inspect(item)})
+          end)
+
+        {Enum.reverse(coerced), fixes}
 
       _ ->
         {[], []}
@@ -175,7 +189,7 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
       children = elements |> Map.get(id, %{}) |> Map.get("children", [])
 
       Enum.reduce(children, visited, fn child_id, acc ->
-        collect_reachable(to_string(child_id), elements, acc)
+        collect_reachable(Normalizer.safe_to_string(child_id), elements, acc)
       end)
     end
   end

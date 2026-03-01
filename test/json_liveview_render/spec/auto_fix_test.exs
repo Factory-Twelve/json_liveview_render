@@ -180,6 +180,34 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
       assert fixed["elements"]["page"]["children"] == ["metric_1"]
       assert Enum.any?(fixes, &String.contains?(&1, "wrapped single child"))
     end
+
+    test "drops non-string-coercible children (e.g. nested maps) instead of crashing" do
+      spec = %{
+        "root" => "page",
+        "elements" => %{
+          "page" => %{
+            "type" => "column",
+            "props" => %{},
+            "children" => ["metric_1", %{"nested" => "object"}, "metric_2"]
+          },
+          "metric_1" => %{
+            "type" => "metric",
+            "props" => %{"label" => "Rev", "value" => "$1"},
+            "children" => []
+          },
+          "metric_2" => %{
+            "type" => "metric",
+            "props" => %{"label" => "Cost", "value" => "$2"},
+            "children" => []
+          }
+        }
+      }
+
+      {:ok, fixed, fixes} = Spec.auto_fix(spec, Catalog)
+
+      assert fixed["elements"]["page"]["children"] == ["metric_1", "metric_2"]
+      assert Enum.any?(fixes, &String.contains?(&1, "dropped non-string child"))
+    end
   end
 
   describe "orphan detection" do
@@ -251,6 +279,24 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
   describe "error cases" do
     test "returns error when elements is missing" do
       assert {:error, :elements_missing} = Spec.auto_fix(%{"root" => "x"}, Catalog)
+    end
+
+    test "handles non-String.Chars prop keys without crashing" do
+      spec = %{
+        "root" => "m_1",
+        "elements" => %{
+          "m_1" => %{
+            "type" => "metric",
+            "props" => %{%{"nested" => "key"} => "value", "label" => "Rev", "value" => "$1"},
+            "children" => []
+          }
+        }
+      }
+
+      {:ok, fixed, _fixes} = Spec.auto_fix(spec, Catalog)
+
+      # The non-string key is stringified via inspect fallback
+      assert is_map(fixed["elements"]["m_1"]["props"])
     end
   end
 
