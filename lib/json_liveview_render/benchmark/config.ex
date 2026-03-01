@@ -20,7 +20,8 @@ defmodule JsonLiveviewRender.Benchmark.Config do
           depth: pos_integer(),
           branching_factor: pos_integer(),
           format: :text | :json,
-          ci: boolean()
+          ci: boolean(),
+          case_name: String.t() | nil
         }
 
   defstruct iterations: @default_iterations,
@@ -30,7 +31,8 @@ defmodule JsonLiveviewRender.Benchmark.Config do
             depth: @default_depth,
             branching_factor: @default_branching_factor,
             format: @default_format,
-            ci: false
+            ci: false,
+            case_name: nil
 
   @doc false
   @spec from_options(Keyword.t()) :: t()
@@ -51,7 +53,8 @@ defmodule JsonLiveviewRender.Benchmark.Config do
       depth: config.depth,
       branching_factor: config.branching_factor,
       format: config.format,
-      ci: config.ci
+      ci: config.ci,
+      case_name: config.case_name
     }
   end
 
@@ -136,7 +139,8 @@ defmodule JsonLiveviewRender.Benchmark.Config do
       depth: Keyword.fetch!(options, :depth),
       branching_factor: Keyword.fetch!(options, :branching_factor),
       format: Keyword.fetch!(options, :format),
-      ci: Keyword.fetch!(options, :ci)
+      ci: Keyword.fetch!(options, :ci),
+      case_name: Keyword.get(options, :case_name)
     }
   end
 

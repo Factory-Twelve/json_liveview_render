@@ -9,12 +9,14 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
 
       mix json_liveview_render.bench
       mix json_liveview_render.bench --iterations 200 --suites validate,render
-      mix json_liveview_render.bench --seed 42 --node-count 20 --depth 4 --branching-factor 3
-      mix json_liveview_render.bench --format json
+  mix json_liveview_render.bench --seed 42 --node-count 20 --depth 4 --branching-factor 3
+  mix json_liveview_render.bench --format json
+  mix json_liveview_render.bench --matrix --seed 20260301 --iterations 3
   """
 
   @switches [
     ci: :boolean,
+    matrix: :boolean,
     format: :string,
     iterations: :integer,
     seed: :integer,
@@ -54,15 +56,26 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
           Mix.raise("invalid benchmark options: #{Exception.message(exception)}")
       end
 
-    report = JsonLiveviewRender.Benchmark.Runner.run(config)
-
     output =
-      case config.format do
-        :json ->
-          JsonLiveviewRender.Benchmark.Runner.format_json(report)
+      if Keyword.get(parsed, :matrix, false) do
+        matrix_reports =
+          JsonLiveviewRender.Benchmark.Matrix.configs_for(config)
+          |> Enum.map(&JsonLiveviewRender.Benchmark.Runner.run/1)
 
-        :text ->
-          JsonLiveviewRender.Benchmark.Runner.render_text(report)
+        case config.format do
+          :json -> format_matrix_json(matrix_reports)
+          :text -> format_matrix_text(matrix_reports)
+        end
+      else
+        report = JsonLiveviewRender.Benchmark.Runner.run(config)
+
+        case config.format do
+          :json ->
+            JsonLiveviewRender.Benchmark.Runner.format_json(report)
+
+          :text ->
+            JsonLiveviewRender.Benchmark.Runner.render_text(report)
+        end
       end
 
     Mix.shell().info(output)
@@ -81,5 +94,27 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
 
   defp ci_env? do
     System.get_env("CI") == "true"
+  end
+
+  defp format_matrix_json(matrix_reports) do
+    Jason.encode_to_iodata!(%{matrix: true, cases: matrix_reports}, pretty: true)
+  end
+
+  defp format_matrix_text(matrix_reports) do
+    case_blocks =
+      matrix_reports
+      |> Enum.with_index(1)
+      |> Enum.flat_map(fn {report, index} ->
+        [
+          "Case ",
+          Integer.to_string(index),
+          ": ",
+          report.config.case_name || "default",
+          "\n",
+          JsonLiveviewRender.Benchmark.Runner.render_text(report)
+        ]
+      end)
+
+    ["JsonLiveviewRender Bench Harness Matrix\n", "\n" | case_blocks]
   end
 end

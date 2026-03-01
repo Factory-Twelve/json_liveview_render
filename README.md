@@ -477,13 +477,16 @@ mix json_liveview_render.bench
 # common options
 mix json_liveview_render.bench --iterations 500 --suites validate,render --seed 20260301
 mix json_liveview_render.bench --format json --node-count 240 --depth 7 --branching-factor 3
+mix json_liveview_render.bench --matrix --iterations 120 --seed 20260301
 ```
 
 Current report output includes:
 
 - benchmark configuration (iterations, suites, seed, node_count, depth, branching_factor)
+- matrix case name and node graph shape (when `--matrix` is enabled)
 - project/runtime metadata (Elixir, OTP, OS, scheduler/slice counts)
-- timing metrics per suite (min/max/mean/p95/p99)
+- timing and throughput metrics per suite (min/max/mean/p50/p95/p99 + ops/sec)
+- memory statistics per suite for matrix runs (total/mean/min/max/p50/p95)
 
 ## Learnings
 

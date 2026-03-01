@@ -69,6 +69,37 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
     assert output =~ "suite=validate"
   end
 
+  test "runs matrix mode with deterministic cases and large-case coverage" do
+    output =
+      capture_io(fn ->
+        Mix.Tasks.JsonLiveviewRender.Bench.run([
+          "--format",
+          "json",
+          "--iterations",
+          "2",
+          "--matrix",
+          "--seed",
+          "111"
+        ])
+      end)
+
+    payload = Jason.decode!(String.trim(output))
+
+    assert payload["matrix"] == true
+    assert is_list(payload["cases"])
+    assert Enum.count(payload["cases"]) == 5
+    assert Enum.any?(payload["cases"], &(&1["config"]["node_count"] >= 1000))
+
+    render_suite =
+      payload["cases"]
+      |> List.last()
+      |> Map.get("suites")
+      |> Enum.find(&(&1["name"] == "render"))
+
+    assert render_suite["metrics"]["p50_microseconds"] != nil
+    assert render_suite["metrics"]["memory_p95_bytes"] != nil
+  end
+
   test "accepts legacy shape flags through parser" do
     output =
       capture_io(fn ->
