@@ -47,7 +47,8 @@ defmodule JsonLiveviewRender.MixProject do
   defp package do
     [
       licenses: ["MIT"],
-      files: ~w(lib .formatter.exs mix.exs README.md CHANGELOG.md LEARNINGS.md LICENSE),
+      files:
+        ~w(lib .formatter.exs mix.exs README.md RELEASE_READINESS.md CHANGELOG.md LEARNINGS.md LICENSE),
       links: %{
         "GitHub" => "https://github.com/Factory-Twelve/json_liveview_render"
       }
@@ -57,7 +58,7 @@ defmodule JsonLiveviewRender.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "CHANGELOG.md", "LEARNINGS.md", "LICENSE"]
+      extras: ["README.md", "RELEASE_READINESS.md", "CHANGELOG.md", "LEARNINGS.md", "LICENSE"]
     ]
   end
 
