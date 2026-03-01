@@ -21,12 +21,9 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
     }
   end
 
-  defp metadata(%Config{} = config) do
+  defp metadata(_config) do
     %{
       benchmarked_at_utc: DateTime.utc_now() |> DateTime.to_iso8601(),
-      config: %{
-        ci: config.ci
-      },
       project: project_metadata(),
       machine: machine_metadata()
     }
@@ -148,7 +145,7 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
       to_string(report.config.format),
       "\n",
       "  ci=",
-      to_string(report_ci(report)),
+      to_string(report.config.ci),
       "\n",
       "\n",
       "Metadata:\n",
@@ -189,13 +186,6 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
     (value / 1000)
     |> Float.round(3)
     |> :erlang.float_to_binary(decimals: 3)
-  end
-
-  defp report_ci(report) do
-    case get_in(report, [:metadata, :config, :ci]) do
-      nil -> Map.get(report.config || %{}, :ci, false)
-      ci -> ci
-    end
   end
 
   defp metric_to_string(value) when is_integer(value), do: Integer.to_string(value)
