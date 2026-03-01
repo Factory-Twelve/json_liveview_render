@@ -87,8 +87,17 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
 
     assert payload["matrix"] == true
     assert is_list(payload["cases"])
-    assert Enum.count(payload["cases"]) == 5
+    assert Enum.count(payload["cases"]) == 3
     assert Enum.any?(payload["cases"], &(&1["config"]["node_count"] >= 1000))
+
+    case_names =
+      Enum.map(payload["cases"], & &1["config"]["case_name"])
+
+    assert case_names == [
+             "validate_small_depth_4_width_2_nodes_15",
+             "validate_typical_depth_5_width_4_nodes_341",
+             "validate_pathological_depth_6_width_4_nodes_1024"
+           ]
 
     render_suite =
       payload["cases"]

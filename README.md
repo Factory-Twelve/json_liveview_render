@@ -488,6 +488,55 @@ Current report output includes:
 - timing and throughput metrics per suite (min/max/mean/p50/p95/p99 + ops/sec)
 - memory statistics per suite for matrix runs (total/mean/min/max/p50/p95)
 
+### Validate/2 baseline (reproducible)
+
+The following baselines use deterministic validate inputs from:
+
+- seed `20260301`
+- iterations `30`
+- command:
+
+```bash
+mix json_liveview_render.bench --matrix --suites validate --seed 20260301 --iterations 30 --format json
+```
+
+Captured baseline snapshot:
+
+```json
+{
+  "matrix": true,
+  "cases": [
+    {
+      "case_name": "validate_small_depth_4_width_2_nodes_15",
+      "node_count": 15,
+      "p50_microseconds": 17,
+      "p95_microseconds": 61,
+      "memory_p50_bytes": 1328,
+      "memory_p95_bytes": 99320,
+      "iterations": 30
+    },
+    {
+      "case_name": "validate_typical_depth_5_width_4_nodes_341",
+      "node_count": 341,
+      "p50_microseconds": 295,
+      "p95_microseconds": 368,
+      "memory_p50_bytes": 0,
+      "memory_p95_bytes": 0,
+      "iterations": 30
+    },
+    {
+      "case_name": "validate_pathological_depth_6_width_4_nodes_1024",
+      "node_count": 1024,
+      "p50_microseconds": 803,
+      "p95_microseconds": 859,
+      "memory_p50_bytes": 0,
+      "memory_p95_bytes": 0,
+      "iterations": 30
+    }
+  ]
+}
+```
+
 ## Learnings
 
 - See [LEARNINGS.md](./LEARNINGS.md) for implementation learnings and follow-up risks.
