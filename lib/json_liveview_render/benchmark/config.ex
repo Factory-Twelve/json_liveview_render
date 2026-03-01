@@ -3,9 +3,10 @@ defmodule JsonLiveviewRender.Benchmark.Config do
 
   @default_iterations 300
   @default_seed 2026_03_01
-  @default_sections 12
-  @default_columns 4
-  @default_metrics_per_column 12
+  @legacy_node_count 637
+  @default_node_count @legacy_node_count
+  @default_depth 6
+  @default_branching_factor 4
   @default_suites [:validate, :render]
   @default_format :text
 
@@ -15,9 +16,9 @@ defmodule JsonLiveviewRender.Benchmark.Config do
           iterations: pos_integer(),
           suites: [suite()],
           seed: integer(),
-          sections: pos_integer(),
-          columns: pos_integer(),
-          metrics_per_column: pos_integer(),
+          node_count: pos_integer(),
+          depth: pos_integer(),
+          branching_factor: pos_integer(),
           format: :text | :json,
           ci: boolean()
         }
@@ -25,9 +26,9 @@ defmodule JsonLiveviewRender.Benchmark.Config do
   defstruct iterations: @default_iterations,
             suites: @default_suites,
             seed: @default_seed,
-            sections: @default_sections,
-            columns: @default_columns,
-            metrics_per_column: @default_metrics_per_column,
+            node_count: @default_node_count,
+            depth: @default_depth,
+            branching_factor: @default_branching_factor,
             format: @default_format,
             ci: false
 
@@ -46,9 +47,9 @@ defmodule JsonLiveviewRender.Benchmark.Config do
       iterations: config.iterations,
       suites: Enum.map(config.suites, &Atom.to_string/1),
       seed: config.seed,
-      sections: config.sections,
-      columns: config.columns,
-      metrics_per_column: config.metrics_per_column,
+      node_count: config.node_count,
+      depth: config.depth,
+      branching_factor: config.branching_factor,
       format: config.format,
       ci: config.ci
     }
@@ -56,23 +57,74 @@ defmodule JsonLiveviewRender.Benchmark.Config do
 
   defp sanitize_options(raw_options) do
     raw_options
+    |> apply_legacy_shape_options()
     |> Keyword.update(:seed, @default_seed, &normalize_integer/1)
     |> Keyword.update(:iterations, @default_iterations, &normalize_integer/1)
-    |> Keyword.update(:sections, @default_sections, &normalize_integer/1)
-    |> Keyword.update(:columns, @default_columns, &normalize_integer/1)
-    |> Keyword.update(:metrics_per_column, @default_metrics_per_column, &normalize_integer/1)
+    |> Keyword.update(:node_count, @default_node_count, &normalize_integer/1)
+    |> Keyword.update(:depth, @default_depth, &normalize_integer/1)
+    |> Keyword.update(:branching_factor, @default_branching_factor, &normalize_integer/1)
     |> Keyword.update(:format, @default_format, &normalize_format/1)
     |> Keyword.update(:suites, @default_suites, &normalize_suites/1)
     |> Keyword.put_new(:ci, false)
   end
 
   defp validate_options(options) do
-    Enum.each([:iterations, :seed, :sections, :columns, :metrics_per_column], fn key ->
+    Enum.each([:iterations, :seed, :node_count, :depth, :branching_factor], fn key ->
       value = Keyword.fetch!(options, key)
       validate_positive_integer!(key, value)
     end)
 
+    validate_shape_capacity!(options)
     options
+  end
+
+  defp apply_legacy_shape_options(options) do
+    if Keyword.has_key?(options, :node_count) do
+      options
+      |> Keyword.delete(:sections)
+      |> Keyword.delete(:columns)
+      |> Keyword.delete(:metrics_per_column)
+    else
+      has_legacy_option? =
+        Enum.any?([:sections, :columns, :metrics_per_column], &Keyword.has_key?(options, &1))
+
+      if has_legacy_option? do
+        options
+        |> Keyword.put_new(
+          :node_count,
+          compute_legacy_node_count(
+            Keyword.get(options, :sections, 12),
+            Keyword.get(options, :columns, 4),
+            Keyword.get(options, :metrics_per_column, 12)
+          )
+        )
+        |> Keyword.delete(:sections)
+        |> Keyword.delete(:columns)
+        |> Keyword.delete(:metrics_per_column)
+      else
+        options
+      end
+    end
+  end
+
+  defp compute_legacy_node_count(sections, columns, metrics_per_column) do
+    sections = normalize_integer(sections)
+    columns = normalize_integer(columns)
+    metrics_per_column = normalize_integer(metrics_per_column)
+
+    1 + sections * (1 + columns * (1 + metrics_per_column))
+  end
+
+  defp validate_shape_capacity!(options) do
+    node_count = Keyword.fetch!(options, :node_count)
+    depth = Keyword.fetch!(options, :depth)
+    branching_factor = Keyword.fetch!(options, :branching_factor)
+    max_nodes = max_nodes_possible(depth, branching_factor)
+
+    if node_count > max_nodes do
+      raise ArgumentError,
+            "invalid benchmark shape: node_count #{node_count} exceeds max nodes #{max_nodes} for depth #{depth} and branching_factor #{branching_factor}"
+    end
   end
 
   defp build_struct(options) do
@@ -80,9 +132,9 @@ defmodule JsonLiveviewRender.Benchmark.Config do
       iterations: Keyword.fetch!(options, :iterations),
       suites: Keyword.fetch!(options, :suites),
       seed: Keyword.fetch!(options, :seed),
-      sections: Keyword.fetch!(options, :sections),
-      columns: Keyword.fetch!(options, :columns),
-      metrics_per_column: Keyword.fetch!(options, :metrics_per_column),
+      node_count: Keyword.fetch!(options, :node_count),
+      depth: Keyword.fetch!(options, :depth),
+      branching_factor: Keyword.fetch!(options, :branching_factor),
       format: Keyword.fetch!(options, :format),
       ci: Keyword.fetch!(options, :ci)
     }
@@ -144,5 +196,11 @@ defmodule JsonLiveviewRender.Benchmark.Config do
 
   defp validate_positive_integer!(key, value) do
     raise ArgumentError, "expected #{key} to be a positive integer, got: #{inspect(value)}"
+  end
+
+  defp max_nodes_possible(1, _branching_factor), do: 1
+
+  defp max_nodes_possible(depth, branching_factor) do
+    1 + branching_factor * max_nodes_possible(depth - 1, branching_factor)
   end
 end

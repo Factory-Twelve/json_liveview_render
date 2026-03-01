@@ -9,7 +9,7 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
 
       mix json_liveview_render.bench
       mix json_liveview_render.bench --iterations 200 --suites validate,render
-      mix json_liveview_render.bench --seed 42 --sections 20 --columns 3 --metrics-per-column 10
+      mix json_liveview_render.bench --seed 42 --node-count 20 --depth 4 --branching-factor 3
       mix json_liveview_render.bench --format json
   """
 
@@ -17,19 +17,23 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
     ci: :boolean,
     format: :string,
     iterations: :integer,
-    metrics_per_column: :integer,
     seed: :integer,
-    sections: :integer,
-    columns: :integer,
-    suites: :string
+    suites: :string,
+    node_count: :integer,
+    depth: :integer,
+    branching_factor: :integer
   ]
 
   @impl true
   def run(argv) do
-    {parsed, _positionals, invalid} = OptionParser.parse(argv, switches: @switches)
+    {parsed, positionals, invalid} = OptionParser.parse(argv, switches: @switches)
 
     if invalid != [] do
       raise_invalid_args!(invalid)
+    end
+
+    if positionals != [] do
+      Mix.raise("unexpected positional argument(s): #{inspect(positionals)}")
     end
 
     parsed =

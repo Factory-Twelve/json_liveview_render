@@ -18,12 +18,12 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
           "3",
           "--suites",
           "validate,render",
-          "--sections",
-          "2",
-          "--columns",
-          "2",
-          "--metrics-per-column",
-          "2"
+          "--node-count",
+          "25",
+          "--depth",
+          "5",
+          "--branching-factor",
+          "3"
         ])
       end)
 
@@ -31,7 +31,9 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
 
     assert payload["config"]["iterations"] == 3
     assert payload["config"]["suites"] == ["validate", "render"]
-    assert payload["config"]["sections"] == 2
+    assert payload["config"]["node_count"] == 25
+    assert payload["config"]["depth"] == 5
+    assert payload["config"]["branching_factor"] == 3
     assert payload["metadata"]["project"]["app"] == "json_liveview_render"
     assert is_integer(payload["metadata"]["machine"]["process_count"])
     assert payload["metadata"]["machine"]["process_count"] > 0
@@ -54,12 +56,12 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
           "2",
           "--suites",
           "validate",
-          "--sections",
-          "1",
-          "--columns",
-          "1",
-          "--metrics-per-column",
-          "1"
+          "--node-count",
+          "15",
+          "--depth",
+          "4",
+          "--branching-factor",
+          "2"
         ])
       end)
 

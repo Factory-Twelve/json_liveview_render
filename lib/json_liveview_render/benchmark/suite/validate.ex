@@ -5,12 +5,22 @@ defmodule JsonLiveviewRender.Benchmark.Suite.Validate do
 
   @spec run(Config.t(), map()) :: map()
   def run(%Config{} = config, context) do
+    case JsonLiveviewRender.Spec.validate(context.spec, JsonLiveviewRender.Benchmark.Catalog) do
+      {:ok, _} ->
+        :ok
+
+      {:error, reasons} ->
+        raise "benchmark validate suite failed: spec validation returned errors: #{inspect(reasons)}"
+    end
+
     %{
       metrics:
         Metrics.measure(config.iterations, fn ->
           JsonLiveviewRender.Spec.validate(context.spec, JsonLiveviewRender.Benchmark.Catalog)
-        end)
+        end),
+      name: "validate",
+      kind: "validate",
+      status: :ok
     }
-    |> Map.merge(%{name: "validate", kind: "validate", status: :ok})
   end
 end
