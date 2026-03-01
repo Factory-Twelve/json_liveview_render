@@ -68,4 +68,30 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
     assert output =~ "JsonLiveviewRender Bench Harness"
     assert output =~ "suite=validate"
   end
+
+  test "accepts legacy shape flags through parser" do
+    output =
+      capture_io(fn ->
+        Mix.Tasks.JsonLiveviewRender.Bench.run([
+          "--format",
+          "json",
+          "--iterations",
+          "2",
+          "--suites",
+          "validate",
+          "--sections",
+          "3",
+          "--columns",
+          "2",
+          "--metrics-per-column",
+          "4"
+        ])
+      end)
+
+    payload = Jason.decode!(String.trim(output))
+
+    assert payload["config"]["node_count"] == 34
+    assert payload["config"]["depth"] == 6
+    assert payload["config"]["branching_factor"] == 4
+  end
 end

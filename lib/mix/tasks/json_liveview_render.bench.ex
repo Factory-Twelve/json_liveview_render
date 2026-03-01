@@ -19,6 +19,9 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
     iterations: :integer,
     seed: :integer,
     suites: :string,
+    sections: :integer,
+    columns: :integer,
+    metrics_per_column: :integer,
     node_count: :integer,
     depth: :integer,
     branching_factor: :integer
