@@ -100,7 +100,7 @@ defmodule JsonLiveviewRender.Benchmark.Config do
             Keyword.get(options, :columns, @default_columns),
             Keyword.get(options, :metrics_per_column, @default_metrics_per_column)
           )
-          )
+        )
         |> Keyword.delete(:sections)
         |> Keyword.delete(:columns)
         |> Keyword.delete(:metrics_per_column)
