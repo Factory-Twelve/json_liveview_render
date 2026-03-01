@@ -106,9 +106,11 @@ defmodule JsonLiveviewRender.Benchmark.GuardrailTest do
     File.mkdir_p!(tmp_dir)
     File.write!(path, "[]")
 
-    assert_raise ArgumentError, ~r/invalid benchmark guardrail thresholds at .*thresholds\.json/, fn ->
-      JsonLiveviewRender.Benchmark.Guardrail.load_thresholds(path)
-    end
+    assert_raise ArgumentError,
+                 ~r/invalid benchmark guardrail thresholds at .*thresholds\.json/,
+                 fn ->
+                   JsonLiveviewRender.Benchmark.Guardrail.load_thresholds(path)
+                 end
   end
 
   test "render_text/1 includes mode-independent summary lines" do
