@@ -9,9 +9,9 @@ defmodule JsonLiveviewRender.Benchmark.RunnerTest do
         iterations: 3,
         suites: ["validate"],
         seed: 123,
-        sections: 1,
-        columns: 1,
-        metrics_per_column: 1,
+        node_count: 25,
+        depth: 3,
+        branching_factor: 2,
         format: :text,
         ci: false
       },
