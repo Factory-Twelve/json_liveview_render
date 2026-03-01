@@ -93,6 +93,24 @@ defmodule JsonLiveviewRender.Benchmark.GuardrailTest do
     assert thresholds.suites["render"].cases["depth_4_width_2"] == 145.0
   end
 
+  test "load_thresholds/1 raises ArgumentError for valid JSON with non-object root" do
+    tmp_dir =
+      Path.join(
+        System.tmp_dir!(),
+        "json_liveview_render_guardrail_#{System.unique_integer([:positive])}"
+      )
+
+    on_exit(fn -> File.rm_rf!(tmp_dir) end)
+
+    path = Path.join(tmp_dir, "thresholds.json")
+    File.mkdir_p!(tmp_dir)
+    File.write!(path, "[]")
+
+    assert_raise ArgumentError, ~r/invalid benchmark guardrail thresholds at .*thresholds\.json/, fn ->
+      JsonLiveviewRender.Benchmark.Guardrail.load_thresholds(path)
+    end
+  end
+
   test "render_text/1 includes mode-independent summary lines" do
     result =
       JsonLiveviewRender.Benchmark.Guardrail.evaluate(

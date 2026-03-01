@@ -159,6 +159,11 @@ defmodule JsonLiveviewRender.Benchmark.Guardrail do
     }
   end
 
+  defp normalize_thresholds!(decoded, _path) do
+    raise ArgumentError,
+          "expected threshold file to be a JSON object, got: #{inspect(decoded)}"
+  end
+
   defp validate_version!(version) when is_integer(version) and version > 0, do: :ok
 
   defp validate_version!(version) do
