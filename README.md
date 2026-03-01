@@ -8,6 +8,32 @@ JsonLiveviewRender implements the **Catalog -> Spec -> Render** pattern:
 2. Have an LLM generate a flat JSON spec constrained to that catalog.
 3. Validate and render the spec server-side with LiveView.
 
+## Why JsonLiveviewRender
+
+JsonLiveviewRender shares the same flat-spec architecture (`root` + `elements` map) as [vercel-labs/json-render](https://github.com/vercel-labs/json-render), but makes different trade-offs. json-render optimizes for **breadth** — React, Vue, React Native, Remotion, PDF, and 36 pre-built shadcn/ui components. JsonLiveviewRender optimizes for **server-side AI robustness** inside the Phoenix/LiveView ecosystem.
+
+### What JsonLiveviewRender adds to the pattern
+
+| Capability | json-render | JsonLiveviewRender |
+|---|---|---|
+| Auto-fix AI mistakes | — | `Spec.auto_fix/2` coerces types, wraps children, detects orphans |
+| Error formatting for re-prompting | — | `Spec.format_errors/2` with catalog-enriched context |
+| Per-element error boundaries | — | Broken elements degrade gracefully instead of crashing the page |
+| Server-side permissions | — | Per-component role-based filtering with deny lists and inheritance |
+| Streaming validation | SpecStream renders partial specs | `validate_partial/3` + strict event-ordered `Stream.ingest/4` |
+| Binding type checks | Zod at schema level | Runtime `binding_type` checks on resolved server data |
+
+### Where json-render leads
+
+| Capability | json-render | JsonLiveviewRender |
+|---|---|---|
+| Cross-platform rendering | React, Vue, React Native, Remotion, PDF, SVG | Phoenix LiveView only |
+| Pre-built components | 36 shadcn/ui components | Bring your own |
+| Client-side state | Redux, Zustand, Jotai, XState adapters | LiveView assigns (server-side) |
+| Action system | Components emit named actions | Not yet supported |
+
+JsonLiveviewRender is purpose-built for the server-side AI loop: the LLM generates a spec, the server auto-fixes and validates it, formats errors back to the LLM if needed, and if something still breaks at render time, the page degrades gracefully instead of crashing.
+
 ## API Stability (PRD Contract)
 
 JsonLiveviewRender tracks behavior by release family with an explicit v0.3 scope lock.
@@ -22,6 +48,7 @@ JsonLiveviewRender tracks behavior by release family with an explicit v0.3 scope
 | Schema (`JsonLiveviewRender.Schema`) | ✅ In scope | | |
 | Bindings (`JsonLiveviewRender.Bindings`) | ✅ In scope | | |
 | Debug (`JsonLiveviewRender.Debug`) | ✅ In scope | | |
+| Spec auto-fix & error formatting (`Spec.auto_fix`, `Spec.format_errors`) | | ✅ In scope | |
 | Stream API (`JsonLiveviewRender.Stream`) | | ✅ In scope | |
 | Partial validation/rendering (`validate_partial`, `allow_partial`) | | ✅ In scope | |
 | Streaming adapters (`JsonLiveviewRender.Stream.Adapter.*`) | | | ✅ Deferred to companion package path |
@@ -99,6 +126,44 @@ case JsonLiveviewRender.Spec.validate(spec, MyApp.UICatalog) do
     Logger.warning("Invalid spec: #{inspect(reasons)}")
 end
 ```
+
+## AI Error Handling (v0.3 candidate)
+
+Auto-fix common AI mistakes before validation, and format errors for AI re-prompting:
+
+```elixir
+# Fix common AI mistakes (string→integer coercion, single-string children, etc.)
+{:ok, fixed_spec, fixes} = JsonLiveviewRender.Spec.auto_fix(raw_spec, MyApp.UICatalog)
+
+# fixes is a list of human-readable descriptions, e.g.:
+# ["element \"metric_1\" prop \"count\": coerced \"42\" to integer 42"]
+
+# Then validate as normal
+case JsonLiveviewRender.Spec.validate(fixed_spec, MyApp.UICatalog) do
+  {:ok, spec} ->
+    # render...
+
+  {:error, errors} ->
+    # Format errors for sending back to the AI
+    prompt = JsonLiveviewRender.Spec.format_errors(errors, MyApp.UICatalog)
+    # => "The generated UI spec has the following errors:\n- element \"card_1\" references unknown component \"Cardx\" (available types: card, metric, text)"
+end
+```
+
+Enable per-element error boundaries so a single broken element doesn't crash the whole render:
+
+```elixir
+<JsonLiveviewRender.Renderer.render
+  spec={@spec}
+  catalog={MyApp.UICatalog}
+  registry={MyApp.UIRegistry}
+  bindings={@bindings}
+  current_user={@current_user}
+  error_boundary={true}
+/>
+```
+
+When `error_boundary` is enabled, elements that raise during rendering are silently removed (with a `Logger.warning`) and their siblings continue to render.
 
 ## Data Binding (v0.2 Core)
 

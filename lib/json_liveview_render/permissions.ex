@@ -133,7 +133,7 @@ defmodule JsonLiveviewRender.Permissions do
 
       Map.has_key?(required_role, :all_of) ->
         required_roles =
-          normalize_policy_roles!(Map.get(required_role, :all_of), "permission policy")
+          normalize_role_list!(Map.get(required_role, :all_of), "policy")
 
         %{
           required_mode: :all_of,
@@ -143,7 +143,7 @@ defmodule JsonLiveviewRender.Permissions do
 
       Map.has_key?(required_role, :any_of) ->
         required_roles =
-          normalize_policy_roles!(Map.get(required_role, :any_of), "permission policy")
+          normalize_role_list!(Map.get(required_role, :any_of), "policy")
 
         %{
           required_mode: :any_of,
@@ -173,13 +173,6 @@ defmodule JsonLiveviewRender.Permissions do
   defp normalize_role_list!(_roles, policy_key) do
     raise ArgumentError,
           "invalid permission #{policy_key} in catalog component: expected role list"
-  end
-
-  defp normalize_policy_roles!(roles, policy_key) when is_list(roles),
-    do: normalize_role_list!(roles, policy_key)
-
-  defp normalize_policy_roles!(_roles, _policy_key) do
-    raise ArgumentError, "invalid permission policy in catalog component"
   end
 
   defp normalize_deny_list!(roles) when is_list(roles),
@@ -286,32 +279,28 @@ defmodule JsonLiveviewRender.Permissions do
   defp normalize_inherited_roles(inherited_roles), do: [role_key!(inherited_roles)]
 
   defp expand_roles(roles, inheritance_graph) do
-    Enum.reduce(roles, [], fn role, acc ->
-      do_expand_role(role_key(role), inheritance_graph, acc, MapSet.new())
-    end)
+    {result_list, _seen} =
+      Enum.reduce(roles, {[], MapSet.new()}, fn role, {acc_list, acc_set} ->
+        do_expand_role(role_key(role), inheritance_graph, acc_list, acc_set)
+      end)
+
+    Enum.reverse(result_list)
   end
 
-  defp do_expand_role(nil, _inheritance_graph, acc, _seen), do: acc
+  defp do_expand_role(nil, _inheritance_graph, acc_list, acc_set), do: {acc_list, acc_set}
 
-  defp do_expand_role(role_key, inheritance_graph, acc, seen) do
-    if MapSet.member?(seen, role_key) do
-      acc
+  defp do_expand_role(role_key, inheritance_graph, acc_list, acc_set) do
+    if MapSet.member?(acc_set, role_key) do
+      {acc_list, acc_set}
     else
-      next_seen = MapSet.put(seen, role_key)
-      expanded = append_if_missing(acc, role_key)
+      new_list = [role_key | acc_list]
+      new_set = MapSet.put(acc_set, role_key)
       inherited = Map.get(inheritance_graph, role_key, [])
 
-      Enum.reduce(inherited, expanded, fn inherited_role_key, seeded ->
-        do_expand_role(inherited_role_key, inheritance_graph, seeded, next_seen)
+      Enum.reduce(inherited, {new_list, new_set}, fn inherited_role_key,
+                                                     {inner_list, inner_set} ->
+        do_expand_role(inherited_role_key, inheritance_graph, inner_list, inner_set)
       end)
-    end
-  end
-
-  defp append_if_missing(acc, role_key) do
-    if role_key in acc do
-      acc
-    else
-      acc ++ [role_key]
     end
   end
 

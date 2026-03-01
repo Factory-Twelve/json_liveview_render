@@ -28,6 +28,7 @@ defmodule JsonLiveviewRender.Test do
     dev_tools_open = Keyword.get(opts, :dev_tools_open, false)
     dev_tools_enabled = Keyword.get(opts, :dev_tools_enabled, nil)
     dev_tools_force_disable = Keyword.get(opts, :dev_tools_force_disable, false)
+    error_boundary = Keyword.get(opts, :error_boundary, false)
 
     Phoenix.LiveViewTest.render_component(&JsonLiveviewRender.Renderer.render/1,
       spec: spec,
@@ -42,7 +43,8 @@ defmodule JsonLiveviewRender.Test do
       dev_tools: dev_tools,
       dev_tools_open: dev_tools_open,
       dev_tools_enabled: dev_tools_enabled,
-      dev_tools_force_disable: dev_tools_force_disable
+      dev_tools_force_disable: dev_tools_force_disable,
+      error_boundary: error_boundary
     )
   end
 

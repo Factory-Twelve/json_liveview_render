@@ -73,7 +73,7 @@ defmodule JsonLiveviewRender.Bindings do
         :ok
 
       %PropDef{} = prop_def ->
-        if prop_valid?(value, prop_def) do
+        if PropDef.valid?(value, prop_def) do
           :ok
         else
           raise Error,
@@ -113,28 +113,6 @@ defmodule JsonLiveviewRender.Bindings do
         nil
     end)
   end
-
-  defp prop_valid?(nil, %PropDef{required: false}), do: true
-  defp prop_valid?(nil, _), do: false
-  defp prop_valid?(value, %PropDef{type: :string}), do: is_binary(value)
-  defp prop_valid?(value, %PropDef{type: :integer}), do: is_integer(value)
-  defp prop_valid?(value, %PropDef{type: :float}), do: is_integer(value) or is_float(value)
-  defp prop_valid?(value, %PropDef{type: :boolean}), do: is_boolean(value)
-  defp prop_valid?(value, %PropDef{type: :map}), do: is_map(value)
-
-  defp prop_valid?(value, %PropDef{type: :enum, values: values}) do
-    value in values or to_string(value) in Enum.map(values || [], &to_string/1)
-  end
-
-  defp prop_valid?(value, %PropDef{type: {:list, inner}}) when is_list(value) do
-    Enum.all?(value, fn item -> prop_valid?(item, %PropDef{name: :_item, type: inner}) end)
-  end
-
-  defp prop_valid?(value, %PropDef{type: :custom, validator: validator})
-       when is_function(validator, 1),
-       do: validator.(value)
-
-  defp prop_valid?(_value, _prop), do: false
 
   defp maybe_existing_atom(key) do
     String.to_existing_atom(key)

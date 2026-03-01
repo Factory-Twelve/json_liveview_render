@@ -248,4 +248,21 @@ defmodule JsonLiveviewRender.StreamTest do
              assert Map.has_key?(stream.elements, "metric_1")
            end) =~ "ignoring unknown prop"
   end
+
+  test "ingest/3 handles non-stringable prop keys without crashing" do
+    {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
+
+    event =
+      {:element, "metric_1",
+       %{
+         "type" => "metric",
+         "props" => %{
+           %{"nested" => "key"} => "value",
+           "label" => "A",
+           "value" => "1"
+         }
+       }}
+
+    assert {:error, {:unknown_prop, _}} = Stream.ingest(stream, event, Catalog)
+  end
 end

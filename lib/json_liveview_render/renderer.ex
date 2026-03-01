@@ -11,11 +11,13 @@ defmodule JsonLiveviewRender.Renderer do
 
   Optional assigns:
   `bindings`, `authorizer`, `strict`, `check_binding_types`,
-  `allow_partial`, `dev_tools`, `dev_tools_open`,
+  `allow_partial`, `error_boundary`, `dev_tools`, `dev_tools_open`,
   `dev_tools_enabled`, `dev_tools_force_disable`.
   """
 
   use Phoenix.Component
+
+  require Logger
 
   alias JsonLiveviewRender.Bindings
   alias JsonLiveviewRender.Permissions
@@ -35,6 +37,7 @@ defmodule JsonLiveviewRender.Renderer do
   attr(:dev_tools_open, :boolean, default: false)
   attr(:dev_tools_enabled, :any, default: nil)
   attr(:dev_tools_force_disable, :boolean, default: false)
+  attr(:error_boundary, :boolean, default: false)
 
   def render(assigns) do
     validator = spec_validator(assigns.allow_partial)
@@ -65,7 +68,7 @@ defmodule JsonLiveviewRender.Renderer do
 
     ~H"""
     <%= if @_genui_root && Map.has_key?(@_genui_spec["elements"], @_genui_root) do %>
-      <%= render_element(@_genui_root, @_genui_spec, @catalog, @registry, @bindings, @check_binding_types) %>
+      <%= render_element(@_genui_root, @_genui_spec, @catalog, @registry, @bindings, @check_binding_types, @error_boundary) %>
     <% end %>
 
     <%= if dev_tools_enabled?(@dev_tools, @dev_tools_enabled, @dev_tools_force_disable) do %>
@@ -103,7 +106,7 @@ defmodule JsonLiveviewRender.Renderer do
   defp normalize_dev_tools_enabled(true), do: true
   defp normalize_dev_tools_enabled(_), do: false
 
-  defp render_element(id, spec, catalog, registry, bindings, check_binding_types) do
+  defp render_element(id, spec, catalog, registry, bindings, check_binding_types, error_boundary) do
     element = get_in(spec, ["elements", id])
 
     case element do
@@ -111,27 +114,81 @@ defmodule JsonLiveviewRender.Renderer do
         nil
 
       %{"type" => type} = element ->
-        component = catalog.component(type)
-        callback = Registry.fetch!(registry, type)
+        if error_boundary do
+          try do
+            do_render_element(
+              type,
+              element,
+              spec,
+              catalog,
+              registry,
+              bindings,
+              check_binding_types,
+              error_boundary
+            )
+          rescue
+            e ->
+              Logger.warning(
+                "[JsonLiveviewRender.Renderer] error boundary caught error rendering element #{inspect(id)}: #{Exception.message(e)}"
+              )
 
-        raw_props = Map.get(element, "props", %{})
-        props_with_defaults = apply_defaults(raw_props, component.props)
-
-        resolved_props =
-          Bindings.resolve_props(props_with_defaults, bindings,
-            prop_defs: component.props,
-            check_types: check_binding_types
+              nil
+          end
+        else
+          do_render_element(
+            type,
+            element,
+            spec,
+            catalog,
+            registry,
+            bindings,
+            check_binding_types,
+            error_boundary
           )
-
-        children =
-          element
-          |> Map.get("children", [])
-          |> Enum.map(&render_element(&1, spec, catalog, registry, bindings, check_binding_types))
-
-        assigns = to_component_assigns(component.props, resolved_props, children)
-
-        callback.(assigns)
+        end
     end
+  end
+
+  defp do_render_element(
+         type,
+         element,
+         spec,
+         catalog,
+         registry,
+         bindings,
+         check_binding_types,
+         error_boundary
+       ) do
+    component = catalog.component(type)
+    callback = Registry.fetch!(registry, type)
+
+    raw_props = Map.get(element, "props", %{})
+    props_with_defaults = apply_defaults(raw_props, component.props)
+
+    resolved_props =
+      Bindings.resolve_props(props_with_defaults, bindings,
+        prop_defs: component.props,
+        check_types: check_binding_types
+      )
+
+    children =
+      element
+      |> Map.get("children", [])
+      |> Enum.map(
+        &render_element(
+          &1,
+          spec,
+          catalog,
+          registry,
+          bindings,
+          check_binding_types,
+          error_boundary
+        )
+      )
+
+    assigns = to_component_assigns(component.props, resolved_props, children)
+
+    callback.(assigns)
   end
 
   defp apply_defaults(props, prop_defs) do

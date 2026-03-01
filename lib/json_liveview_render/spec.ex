@@ -13,9 +13,15 @@ defmodule JsonLiveviewRender.Spec do
 
   alias JsonLiveviewRender.Catalog.ComponentDef
   alias JsonLiveviewRender.Catalog.PropDef
+  alias JsonLiveviewRender.Spec.AutoFix
   alias JsonLiveviewRender.Spec.Errors
+  alias JsonLiveviewRender.Spec.Normalizer
 
   @type validation_result :: {:ok, map()} | {:error, [term()]}
+
+  defdelegate auto_fix(spec, catalog), to: AutoFix
+  defdelegate format_errors(errors), to: Errors
+  defdelegate format_errors(errors, catalog), to: Errors
 
   @spec validate(map() | String.t(), module()) :: validation_result()
   def validate(spec, catalog), do: validate(spec, catalog, strict: true)
@@ -94,34 +100,11 @@ defmodule JsonLiveviewRender.Spec do
 
   defp normalize_elements(elements) when is_map(elements) do
     Map.new(elements, fn {id, element} ->
-      {to_string(id), normalize_element(element)}
+      {to_string(id), Normalizer.normalize_element(element)}
     end)
   end
 
   defp normalize_elements(elements), do: elements
-
-  defp normalize_element(element) when is_map(element) do
-    type = Map.get(element, "type") || Map.get(element, :type)
-    props = Map.get(element, "props", Map.get(element, :props, %{}))
-    children = Map.get(element, "children", Map.get(element, :children, []))
-
-    %{
-      "type" => if(is_atom(type), do: Atom.to_string(type), else: type),
-      "props" => normalize_props(props),
-      "children" => normalize_children(children)
-    }
-  end
-
-  defp normalize_element(element), do: element
-
-  defp normalize_props(props) when is_map(props) do
-    Map.new(props, fn {k, v} -> {to_string(k), v} end)
-  end
-
-  defp normalize_props(props), do: props
-
-  defp normalize_children(children) when is_list(children), do: Enum.map(children, &to_string/1)
-  defp normalize_children(children), do: children
 
   defp normalize_root(nil), do: nil
   defp normalize_root(root) when is_atom(root), do: Atom.to_string(root)
@@ -190,15 +173,15 @@ defmodule JsonLiveviewRender.Spec do
   defp detect_cycles(nil, _elements), do: []
 
   defp detect_cycles(root, elements) do
-    {_visited, cycles} = dfs(root, elements, MapSet.new(), [], [])
+    {_visited, cycles} = dfs(root, elements, MapSet.new(), [], MapSet.new(), [])
     cycles
   end
 
-  defp dfs(id, elements, visited, path, cycles) do
+  defp dfs(id, elements, visited, path_list, path_set, cycles) do
     cond do
-      id in path ->
-        cycle_path = path ++ [id]
-        {visited, cycles ++ [Errors.cycle_detected(cycle_path)]}
+      MapSet.member?(path_set, id) ->
+        cycle_path = path_list ++ [id]
+        {visited, [Errors.cycle_detected(cycle_path) | cycles]}
 
       MapSet.member?(visited, id) ->
         {visited, cycles}
@@ -206,9 +189,11 @@ defmodule JsonLiveviewRender.Spec do
       true ->
         children = elements |> Map.get(id, %{}) |> Map.get("children", [])
         new_visited = MapSet.put(visited, id)
+        new_path_list = path_list ++ [id]
+        new_path_set = MapSet.put(path_set, id)
 
         Enum.reduce(children, {new_visited, cycles}, fn child, {acc_visited, acc_cycles} ->
-          dfs(child, elements, acc_visited, path ++ [id], acc_cycles)
+          dfs(child, elements, acc_visited, new_path_list, new_path_set, acc_cycles)
         end)
     end
   end
@@ -282,7 +267,7 @@ defmodule JsonLiveviewRender.Spec do
         if Map.has_key?(props, key) do
           value = Map.get(props, key)
 
-          if prop_valid?(value, prop_def) do
+          if PropDef.valid?(value, prop_def) do
             []
           else
             [Errors.invalid_prop_type(id, key, prop_def.type, value)]
@@ -303,26 +288,4 @@ defmodule JsonLiveviewRender.Spec do
 
   defp validate_element_props(id, _element, _catalog, _strict?),
     do: {:error, {:invalid_props, "element #{inspect(id)} props must be a map"}}
-
-  defp prop_valid?(nil, %PropDef{required: false}), do: true
-  defp prop_valid?(nil, _), do: false
-  defp prop_valid?(value, %PropDef{type: :string}), do: is_binary(value)
-  defp prop_valid?(value, %PropDef{type: :integer}), do: is_integer(value)
-  defp prop_valid?(value, %PropDef{type: :float}), do: is_integer(value) or is_float(value)
-  defp prop_valid?(value, %PropDef{type: :boolean}), do: is_boolean(value)
-  defp prop_valid?(value, %PropDef{type: :map}), do: is_map(value)
-
-  defp prop_valid?(value, %PropDef{type: :enum, values: values}) do
-    value in values or to_string(value) in Enum.map(values, &to_string/1)
-  end
-
-  defp prop_valid?(value, %PropDef{type: {:list, inner}}) when is_list(value) do
-    Enum.all?(value, fn item -> prop_valid?(item, %PropDef{name: :_item, type: inner}) end)
-  end
-
-  defp prop_valid?(value, %PropDef{type: :custom, validator: validator})
-       when is_function(validator, 1),
-       do: validator.(value)
-
-  defp prop_valid?(_value, _prop), do: false
 end
