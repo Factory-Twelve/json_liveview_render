@@ -4,7 +4,12 @@ defmodule JsonLiveviewRender.Benchmark.BenchmarkScriptTest do
   @mix_args_file "bench_script_args.txt"
 
   defp with_stub_mix(fun) do
-    tmp_dir = Path.join(System.tmp_dir!(), "json_liveview_render_benchmark_script_#{System.unique_integer([:positive])}")
+    tmp_dir =
+      Path.join(
+        System.tmp_dir!(),
+        "json_liveview_render_benchmark_script_#{System.unique_integer([:positive])}"
+      )
+
     root = Path.expand("../../..", __DIR__)
     script_path = Path.join(root, "scripts/benchmark.sh")
     args_path = Path.join(tmp_dir, @mix_args_file)
@@ -16,6 +21,7 @@ defmodule JsonLiveviewRender.Benchmark.BenchmarkScriptTest do
     #!/usr/bin/env bash
     printf '%s\\n' "$@" > "#{args_path}"
     """)
+
     File.chmod!(mix_path, 0o755)
 
     try do
