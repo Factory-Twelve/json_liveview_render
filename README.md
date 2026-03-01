@@ -361,6 +361,10 @@ Set `@show_dev_tools` from your own environment switch if needed, and keep
 - Phoenix >= 1.8
 - Phoenix LiveView >= 1.1
 
+## Release Readiness Checklist (v0.3 gate)
+
+Use [`RELEASE_READINESS.md`](RELEASE_READINESS.md) as the canonical release gate checklist and smoke matrix for v0.3 sign-off.
+
 ## Release Workflow
 
 Use one canonical command before publishing a new Hex release:
