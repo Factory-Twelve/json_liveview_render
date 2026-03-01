@@ -537,6 +537,50 @@ Captured baseline snapshot:
 }
 ```
 
+### Regression guardrail contract
+
+Threshold definitions are versioned in [`benchmarks/thresholds.json`](./benchmarks/thresholds.json).
+
+- `validate` and `render` each define:
+  - enforced metric (`p95_microseconds`)
+  - max allowed regression percent
+  - per-case baseline values (matrix case names)
+- Guardrail runs by default for both single and matrix benchmark commands.
+- Default enforcement mode is `report_only` (local runs never fail automatically).
+- Optional hard-fail mode:
+  - CLI: `--guardrail-fail`
+  - env: `BENCH_GUARDRAIL_FAIL=true`
+
+Examples:
+
+```bash
+# report-only (default)
+mix json_liveview_render.bench --matrix --seed 20260301 --iterations 30 --format json
+
+# fail process if any threshold is exceeded
+mix json_liveview_render.bench --matrix --seed 20260301 --iterations 30 --format json --guardrail-fail
+```
+
+Failure handling rules:
+
+1. If `guardrail.status=pass`, baseline contract is satisfied.
+2. If `guardrail.status=fail` and `mode=report_only`, treat as a local warning:
+   - capture output,
+   - rerun the same command once to rule out transient noise,
+   - open/update perf follow-up if still failing.
+3. If `guardrail.status=fail` and `mode=fail_on_regression`, treat as blocking:
+   - do not merge/release until either:
+     - performance regression is fixed, or
+     - thresholds are intentionally updated with reviewer approval.
+
+Threshold update checklist (required in PR description):
+
+1. Include exact repro command (`seed`, `iterations`, suites, and format).
+2. Include before/after guardrail output (failed old baseline, passing new baseline).
+3. Explain root cause (`expected perf shift` vs `new workload shape`).
+4. Confirm change scope is limited to `benchmarks/thresholds.json` (or justify extra files).
+5. Link reviewer acknowledgement for baseline reset.
+
 ## Learnings
 
 - See [LEARNINGS.md](./LEARNINGS.md) for implementation learnings and follow-up risks.

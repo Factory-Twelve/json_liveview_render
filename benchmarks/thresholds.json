@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "description": "Benchmark guardrail thresholds for matrix case p95 latency regression detection.",
+  "suites": {
+    "validate": {
+      "metric": "p95_microseconds",
+      "max_regression_percent": 30.0,
+      "cases": {
+        "validate_small_depth_4_width_2_nodes_15": 61,
+        "validate_typical_depth_5_width_4_nodes_341": 368,
+        "validate_pathological_depth_6_width_4_nodes_1024": 859
+      }
+    },
+    "render": {
+      "metric": "p95_microseconds",
+      "max_regression_percent": 30.0,
+      "cases": {
+        "depth_4_width_2": 145,
+        "depth_4_width_4": 320,
+        "depth_5_width_2": 152,
+        "depth_5_width_4": 957,
+        "depth_6_width_4_nodes_1024": 2811
+      }
+    }
+  }
+}
