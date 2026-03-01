@@ -31,7 +31,7 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
         {:error, :elements_missing}
 
       true ->
-        root = if is_atom(root) and not is_nil(root), do: Atom.to_string(root), else: root
+        root = normalize_root_id(root)
 
         elements =
           Map.new(elements, fn {id, el} ->
@@ -117,9 +117,13 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
         {Enum.reverse(coerced), fixes}
 
       _ ->
-        {[], []}
+        fix = ~s(element #{inspect(id)}: replaced malformed children #{inspect(children)} with [])
+        {[], [fix]}
     end
   end
+
+  defp normalize_root_id(nil), do: nil
+  defp normalize_root_id(root), do: Normalizer.safe_to_string(root)
 
   defp normalize_child_id(item) when is_binary(item), do: {:ok, item}
 

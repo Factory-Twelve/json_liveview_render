@@ -208,9 +208,53 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
       assert fixed["elements"]["page"]["children"] == ["metric_1", "metric_2"]
       assert Enum.count(fixes, &String.contains?(&1, "dropped non-string child")) == 2
     end
+
+    test "replaces malformed non-list children with [] and reports a fix" do
+      spec = %{
+        "root" => "page",
+        "elements" => %{
+          "page" => %{
+            "type" => "column",
+            "props" => %{},
+            "children" => %{"unexpected" => "map"}
+          }
+        }
+      }
+
+      {:ok, fixed, fixes} = Spec.auto_fix(spec, Catalog)
+
+      assert fixed["elements"]["page"]["children"] == []
+      assert Enum.any?(fixes, &String.contains?(&1, "replaced malformed children"))
+    end
   end
 
   describe "orphan detection" do
+    test "normalizes non-string root ids to match stringified element ids" do
+      spec = %{
+        "root" => 1,
+        "elements" => %{
+          1 => %{
+            "type" => "column",
+            "props" => %{},
+            "children" => [2]
+          },
+          2 => %{
+            "type" => "metric",
+            "props" => %{"label" => "Rev", "value" => "$1"},
+            "children" => []
+          }
+        }
+      }
+
+      {:ok, fixed, fixes} = Spec.auto_fix(spec, Catalog)
+
+      assert fixed["root"] == "1"
+      assert Map.has_key?(fixed["elements"], "1")
+      assert Map.has_key?(fixed["elements"], "2")
+      refute Enum.any?(fixes, &String.starts_with?(&1, "warning:"))
+      assert {:ok, _} = Spec.validate(fixed, Catalog)
+    end
+
     test "detects unreachable elements" do
       spec = %{
         "root" => "metric_1",
