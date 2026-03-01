@@ -53,8 +53,21 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
       logical_processors: :erlang.system_info(:logical_processors_online),
       schedulers_online: :erlang.system_info(:schedulers_online),
       process_count: :erlang.system_info(:process_limit),
-      word_size: :erlang.system_info(:wordsize_external)
+      word_size: word_size()
     }
+  end
+
+  defp word_size do
+    fetch_system_info(:wordsize_external) || fetch_system_info(:wordsize)
+  end
+
+  defp fetch_system_info(item) do
+    try do
+      :erlang.system_info(item)
+    rescue
+      ArgumentError ->
+        nil
+    end
   end
 
   @spec format_json(map()) :: iodata()
