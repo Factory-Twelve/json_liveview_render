@@ -69,7 +69,7 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
     assert output =~ "suite=validate"
   end
 
-  test "runs matrix mode with deterministic cases and large-case coverage" do
+  test "runs matrix mode with deterministic suite-specific cases and large-case coverage" do
     output =
       capture_io(fn ->
         Mix.Tasks.JsonLiveviewRender.Bench.run([
@@ -87,17 +87,93 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
 
     assert payload["matrix"] == true
     assert is_list(payload["cases"])
-    assert Enum.count(payload["cases"]) == 5
+    assert Enum.count(payload["cases"]) == 8
     assert Enum.any?(payload["cases"], &(&1["config"]["node_count"] >= 1000))
 
-    render_suite =
-      payload["cases"]
-      |> List.last()
-      |> Map.get("suites")
-      |> Enum.find(&(&1["name"] == "render"))
+    case_names =
+      Enum.map(payload["cases"], & &1["config"]["case_name"])
 
-    assert render_suite["metrics"]["p50_microseconds"] != nil
-    assert render_suite["metrics"]["memory_p95_bytes"] != nil
+    assert case_names == [
+             "validate_small_depth_4_width_2_nodes_15",
+             "validate_typical_depth_5_width_4_nodes_341",
+             "validate_pathological_depth_6_width_4_nodes_1024",
+             "depth_4_width_2",
+             "depth_4_width_4",
+             "depth_5_width_2",
+             "depth_5_width_4",
+             "depth_6_width_4_nodes_1024"
+           ]
+
+    suite_names =
+      payload["cases"]
+      |> Enum.map(fn entry -> Map.fetch!(entry, "config")["suites"] end)
+
+    assert suite_names == [
+             ["validate"],
+             ["validate"],
+             ["validate"],
+             ["render"],
+             ["render"],
+             ["render"],
+             ["render"],
+             ["render"]
+           ]
+
+    for case_entry <- payload["cases"] do
+      configured_suites = case_entry["config"]["suites"]
+      assert Enum.map(case_entry["suites"], & &1["name"]) == configured_suites
+
+      suite_entry = hd(case_entry["suites"])
+      assert suite_entry["metrics"]["p50_microseconds"] != nil
+      assert suite_entry["metrics"]["memory_p95_bytes"] != nil
+    end
+  end
+
+  test "runs render-only matrix mode with render-specific workload coverage" do
+    output =
+      capture_io(fn ->
+        Mix.Tasks.JsonLiveviewRender.Bench.run([
+          "--format",
+          "json",
+          "--iterations",
+          "2",
+          "--matrix",
+          "--seed",
+          "111",
+          "--suites",
+          "render"
+        ])
+      end)
+
+    payload = Jason.decode!(String.trim(output))
+
+    assert payload["matrix"] == true
+    assert is_list(payload["cases"])
+    assert Enum.count(payload["cases"]) == 5
+
+    case_names =
+      Enum.map(payload["cases"], & &1["config"]["case_name"])
+
+    assert case_names == [
+             "depth_4_width_2",
+             "depth_4_width_4",
+             "depth_5_width_2",
+             "depth_5_width_4",
+             "depth_6_width_4_nodes_1024"
+           ]
+
+    suite_names =
+      payload["cases"]
+      |> Enum.map(fn entry -> Map.fetch!(entry, "config")["suites"] end)
+
+    assert Enum.all?(suite_names, &(&1 == ["render"]))
+
+    for case_entry <- payload["cases"] do
+      render_suite = Map.get(case_entry, "suites") |> Enum.find(&(&1["name"] == "render"))
+
+      assert render_suite["metrics"]["p50_microseconds"] != nil
+      assert render_suite["metrics"]["memory_p95_bytes"] != nil
+    end
   end
 
   test "accepts legacy shape flags through parser" do
