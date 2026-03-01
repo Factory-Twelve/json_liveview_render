@@ -52,20 +52,16 @@ defmodule JsonLiveviewRender.Schema.PromptBuilder do
   defp permissions_text(permission) when is_binary(permission), do: permission
 
   defp permissions_text(permission) when is_list(permission) do
-    "any_of(#{permission |> Enum.map_join(", ", &to_string/1)})"
+    "any_of(#{format_role_list(permission)})"
   end
 
   defp permissions_text(permission) when is_map(permission) do
     cond do
       Map.has_key?(permission, :any_of) ->
-        any_of = permission |> Map.fetch!(:any_of) |> join_roles()
-        deny = join_roles(Map.get(permission, :deny, []), " deny")
-        "any_of(#{any_of})#{deny}"
+        "any_of(#{format_role_list(Map.fetch!(permission, :any_of))}#{format_deny_clause(Map.get(permission, :deny, []))})"
 
       Map.has_key?(permission, :all_of) ->
-        all_of = permission |> Map.fetch!(:all_of) |> join_roles()
-        deny = join_roles(Map.get(permission, :deny, []), " deny")
-        "all_of(#{all_of})#{deny}"
+        "all_of(#{format_role_list(Map.fetch!(permission, :all_of))}#{format_deny_clause(Map.get(permission, :deny, []))})"
 
       true ->
         "invalid permission policy: #{inspect(permission)}"
@@ -74,23 +70,13 @@ defmodule JsonLiveviewRender.Schema.PromptBuilder do
 
   defp permissions_text(permission), do: inspect(permission)
 
-  defp join_roles(roles, suffix \\ "") when is_list(roles) do
-    case roles do
-      [] ->
-        ""
+  defp format_role_list(roles) when is_list(roles),
+    do: "[" <> Enum.map_join(roles, ", ", &to_string/1) <> "]"
 
-      [head | _tail] when is_binary(head) ->
-        roles_str = Enum.map_join(roles, ", ", &to_string/1)
-        "#{suffix}: [#{roles_str}]"
+  defp format_role_list(roles), do: inspect(roles)
 
-      [head | _tail] when is_atom(head) ->
-        roles_str = Enum.map_join(roles, ", ", &Atom.to_string/1)
-        "#{suffix}: [#{roles_str}]"
-
-      _ ->
-        "#{suffix}: [#{inspect(roles)}]"
-    end
-  end
+  defp format_deny_clause([]), do: ""
+  defp format_deny_clause(deny_roles), do: ", deny: #{format_role_list(deny_roles)}"
 
   defp prop_line(prop_name, %PropDef{} = prop_def) do
     req = if prop_def.required, do: "required", else: "optional"

@@ -81,13 +81,11 @@ defmodule JsonLiveviewRender.Spec do
 
   defp parse_spec(_), do: {:error, [{:invalid_spec, "spec must be a map or JSON string"}]}
 
-  defp normalize_spec_map(%{"root" => _root, "elements" => _elements} = spec), do: spec
-
   defp normalize_spec_map(spec) do
     root = Map.get(spec, :root) || Map.get(spec, "root")
     elements = Map.get(spec, :elements) || Map.get(spec, "elements")
 
-    %{"root" => root, "elements" => normalize_elements(elements || %{})}
+    %{"root" => normalize_root(root), "elements" => normalize_elements(elements)}
   end
 
   defp normalize_elements(elements) when is_map(elements) do
@@ -96,12 +94,12 @@ defmodule JsonLiveviewRender.Spec do
     end)
   end
 
-  defp normalize_elements(_), do: %{}
+  defp normalize_elements(elements), do: elements
 
   defp normalize_element(element) when is_map(element) do
     type = Map.get(element, "type") || Map.get(element, :type)
-    props = Map.get(element, "props") || Map.get(element, :props) || %{}
-    children = Map.get(element, "children") || Map.get(element, :children) || []
+    props = Map.get(element, "props", Map.get(element, :props, %{}))
+    children = Map.get(element, "children", Map.get(element, :children, []))
 
     %{
       "type" => if(is_atom(type), do: Atom.to_string(type), else: type),
@@ -110,16 +108,19 @@ defmodule JsonLiveviewRender.Spec do
     }
   end
 
-  defp normalize_element(_), do: %{}
+  defp normalize_element(element), do: element
 
   defp normalize_props(props) when is_map(props) do
     Map.new(props, fn {k, v} -> {to_string(k), v} end)
   end
 
-  defp normalize_props(_), do: %{}
+  defp normalize_props(props), do: props
 
   defp normalize_children(children) when is_list(children), do: Enum.map(children, &to_string/1)
-  defp normalize_children(_), do: []
+  defp normalize_children(children), do: children
+
+  defp normalize_root(root) when is_atom(root), do: Atom.to_string(root)
+  defp normalize_root(root), do: root
 
   defp validate_structure(spec, allow_missing_root?) do
     root = spec["root"]
@@ -211,6 +212,7 @@ defmodule JsonLiveviewRender.Spec do
     Enum.flat_map(elements, fn {id, element} ->
       case validate_element(id, element, catalog, strict: strict?) do
         :ok -> []
+        {:error, reasons} when is_list(reasons) -> reasons
         {:error, reason} -> [reason]
       end
     end)
@@ -289,7 +291,8 @@ defmodule JsonLiveviewRender.Spec do
 
     case errors do
       [] -> :ok
-      [error | _] -> {:error, error}
+      [error] -> {:error, error}
+      many -> {:error, many}
     end
   end
 
