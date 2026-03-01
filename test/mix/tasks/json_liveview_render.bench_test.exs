@@ -46,6 +46,10 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
              entry["metrics"]["iterations"] == 3 and
                is_number(entry["metrics"]["mean_microseconds"])
            end)
+
+    assert payload["guardrail"]["mode"] == "report_only"
+    assert payload["guardrail"]["checked_count"] == 0
+    assert payload["guardrail"]["skipped_count"] == 2
   end
 
   test "honors default format for local invocation" do
@@ -89,6 +93,8 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
     assert is_list(payload["cases"])
     assert Enum.count(payload["cases"]) == 8
     assert Enum.any?(payload["cases"], &(&1["config"]["node_count"] >= 1000))
+    assert payload["guardrail"]["mode"] == "report_only"
+    assert payload["guardrail"]["checked_count"] == 8
 
     case_names =
       Enum.map(payload["cases"], & &1["config"]["case_name"])
@@ -150,6 +156,8 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
     assert payload["matrix"] == true
     assert is_list(payload["cases"])
     assert Enum.count(payload["cases"]) == 5
+    assert payload["guardrail"]["mode"] == "report_only"
+    assert payload["guardrail"]["checked_count"] == 5
 
     case_names =
       Enum.map(payload["cases"], & &1["config"]["case_name"])
@@ -200,5 +208,66 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
     assert payload["config"]["node_count"] == 34
     assert payload["config"]["depth"] == 6
     assert payload["config"]["branching_factor"] == 4
+  end
+
+  test "guardrail-fail raises when thresholds are exceeded" do
+    thresholds_path = write_thresholds_fixture!(1)
+    on_exit(fn -> File.rm_rf!(Path.dirname(thresholds_path)) end)
+
+    assert_raise Mix.Error, ~r/benchmark guardrail failed/, fn ->
+      capture_io(fn ->
+        Mix.Tasks.JsonLiveviewRender.Bench.run([
+          "--format",
+          "json",
+          "--matrix",
+          "--suites",
+          "validate",
+          "--iterations",
+          "1",
+          "--seed",
+          "111",
+          "--guardrail-thresholds",
+          thresholds_path,
+          "--guardrail-fail"
+        ])
+      end)
+    end
+  end
+
+  test "guardrail-fail cannot be combined with no guardrail" do
+    assert_raise Mix.Error, ~r/--guardrail-fail cannot be used with --no-guardrail/, fn ->
+      Mix.Tasks.JsonLiveviewRender.Bench.run(["--no-guardrail", "--guardrail-fail"])
+    end
+  end
+
+  defp write_thresholds_fixture!(max_regression_percent) do
+    tmp_dir =
+      Path.join(
+        System.tmp_dir!(),
+        "json_liveview_render_bench_thresholds_#{System.unique_integer([:positive])}"
+      )
+
+    File.mkdir_p!(tmp_dir)
+    thresholds_path = Path.join(tmp_dir, "thresholds.json")
+
+    File.write!(
+      thresholds_path,
+      Jason.encode!(%{
+        version: 1,
+        suites: %{
+          validate: %{
+            metric: "p95_microseconds",
+            max_regression_percent: max_regression_percent,
+            cases: %{
+              validate_small_depth_4_width_2_nodes_15: 1,
+              validate_typical_depth_5_width_4_nodes_341: 1,
+              validate_pathological_depth_6_width_4_nodes_1024: 1
+            }
+          }
+        }
+      })
+    )
+
+    thresholds_path
   end
 end
