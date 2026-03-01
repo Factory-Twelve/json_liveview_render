@@ -25,6 +25,20 @@ defmodule JsonLiveviewRender.Benchmark.Components do
     """
   end
 
+  attr(:title, :string, required: true)
+  attr(:children, :list, default: [])
+
+  def section(assigns) do
+    ~H"""
+    <section class="section">
+      <h3><%= @title %></h3>
+      <%= for child <- @children do %>
+        <%= child %>
+      <% end %>
+    </section>
+    """
+  end
+
   attr(:label, :string, required: true)
   attr(:value, :string, required: true)
 
