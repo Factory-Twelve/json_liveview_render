@@ -363,13 +363,27 @@ Set `@show_dev_tools` from your own environment switch if needed, and keep
 
 ## Release Workflow
 
-Before publishing a new Hex release, run metadata validation and the full release check sequence:
+Use one canonical command before publishing a new Hex release:
+
+```bash
+make release-check
+```
+
+This runs the required release-sanity sequence:
 
 1. `mix json_liveview_render.check_metadata`
 2. `mix format --check-formatted`
 3. `mix compile --warnings-as-errors`
 4. `MIX_PUBSUB=0 mix test`
 5. `mix hex.publish --dry-run`
+
+The command exits `0` only when all checks succeed. If any command fails, `make release-check` exits non-zero and stops at the first failure.
+
+To discover available release/CI helpers:
+
+```bash
+make help
+```
 
 ## Development Checks
 
