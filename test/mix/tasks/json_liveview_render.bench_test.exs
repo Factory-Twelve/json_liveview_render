@@ -240,6 +240,46 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
     end
   end
 
+  test "skips guardrail when default thresholds file is missing" do
+    output =
+      with_default_thresholds_temporarily_missing(fn ->
+        capture_io(fn ->
+          Mix.Tasks.JsonLiveviewRender.Bench.run([
+            "--format",
+            "json",
+            "--iterations",
+            "1",
+            "--suites",
+            "validate"
+          ])
+        end)
+      end)
+
+    payload = Jason.decode!(String.trim(output))
+
+    refute Map.has_key?(payload, "guardrail")
+  end
+
+  test "guardrail-fail requires thresholds when default file is missing" do
+    assert_raise Mix.Error,
+                 ~r/benchmark guardrail thresholds are required for --guardrail-fail/,
+                 fn ->
+                   with_default_thresholds_temporarily_missing(fn ->
+                     capture_io(fn ->
+                       Mix.Tasks.JsonLiveviewRender.Bench.run([
+                         "--format",
+                         "json",
+                         "--iterations",
+                         "1",
+                         "--suites",
+                         "validate",
+                         "--guardrail-fail"
+                       ])
+                     end)
+                   end)
+                 end
+  end
+
   defp write_thresholds_fixture!(max_regression_percent) do
     tmp_dir =
       Path.join(
@@ -269,5 +309,21 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
     )
 
     thresholds_path
+  end
+
+  defp with_default_thresholds_temporarily_missing(fun) when is_function(fun, 0) do
+    default_thresholds_path = JsonLiveviewRender.Benchmark.Guardrail.default_thresholds_path()
+
+    backup_path =
+      "#{default_thresholds_path}.backup_#{System.unique_integer([:positive])}"
+
+    File.rename!(default_thresholds_path, backup_path)
+
+    try do
+      fun.()
+    after
+      _ = File.rm(default_thresholds_path)
+      File.rename!(backup_path, default_thresholds_path)
+    end
   end
 end

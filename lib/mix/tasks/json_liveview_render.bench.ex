@@ -78,14 +78,24 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
 
     guardrail_result =
       if guardrail_enabled? do
-        thresholds =
-          JsonLiveviewRender.Benchmark.Guardrail.load_thresholds(
-            guardrail_thresholds ||
-              JsonLiveviewRender.Benchmark.Guardrail.default_thresholds_path()
-          )
+        default_thresholds_path =
+          JsonLiveviewRender.Benchmark.Guardrail.default_thresholds_path()
 
-        JsonLiveviewRender.Benchmark.Guardrail.evaluate(reports, thresholds)
-        |> Map.put(:mode, guardrail_mode(guardrail_fail?))
+        thresholds =
+          load_guardrail_thresholds(guardrail_thresholds, default_thresholds_path)
+
+        if guardrail_fail? and is_nil(thresholds) do
+          Mix.raise(
+            "benchmark guardrail thresholds are required for --guardrail-fail. " <>
+              "Default thresholds file not found at #{default_thresholds_path}. " <>
+              "Provide --guardrail-thresholds PATH."
+          )
+        end
+
+        if thresholds do
+          JsonLiveviewRender.Benchmark.Guardrail.evaluate(reports, thresholds)
+          |> Map.put(:mode, guardrail_mode(guardrail_fail?))
+        end
       end
 
     output =
@@ -147,6 +157,22 @@ defmodule Mix.Tasks.JsonLiveviewRender.Bench do
 
   defp config_options(options) do
     Keyword.drop(options, [:matrix, :guardrail, :guardrail_fail, :guardrail_thresholds])
+  end
+
+  defp load_guardrail_thresholds(nil, default_thresholds_path) do
+    if File.exists?(default_thresholds_path) do
+      JsonLiveviewRender.Benchmark.Guardrail.load_thresholds(default_thresholds_path)
+    else
+      Mix.shell().error(
+        "benchmark guardrail disabled: default thresholds file not found at #{default_thresholds_path}"
+      )
+
+      nil
+    end
+  end
+
+  defp load_guardrail_thresholds(custom_thresholds_path, _default_thresholds_path) do
+    JsonLiveviewRender.Benchmark.Guardrail.load_thresholds(custom_thresholds_path)
   end
 
   defp guardrail_mode(true), do: :fail_on_regression
