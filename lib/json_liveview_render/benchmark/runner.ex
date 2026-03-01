@@ -81,7 +81,7 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
   def format_json(report), do: Jason.encode_to_iodata!(report, pretty: true)
 
   @spec render_text(map()) :: iodata()
-  def render_text(report) do
+def render_text(report) do
     suite_lines =
       Enum.map(report.suites, fn suite ->
         metrics = suite.metrics
@@ -140,7 +140,7 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
       to_string(report.config.format),
       "\n",
       "  ci=",
-      to_string(report.metadata.config.ci),
+      to_string(report_ci(report)),
       "\n",
       "\n",
       "Metadata:\n",
@@ -181,6 +181,13 @@ defmodule JsonLiveviewRender.Benchmark.Runner do
     (value / 1000)
     |> Float.round(3)
     |> :erlang.float_to_binary(decimals: 3)
+  end
+
+  defp report_ci(report) do
+    case get_in(report, [:metadata, :config, :ci]) do
+      nil -> Map.get(report.config || %{}, :ci, false)
+      ci -> ci
+    end
   end
 
   defp metric_to_string(value) when is_integer(value), do: Integer.to_string(value)
