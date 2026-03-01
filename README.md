@@ -369,6 +369,8 @@ Use one canonical command before publishing a new Hex release:
 make release-check
 ```
 
+For local iteration, release triggers, and tag policy, see [Release policy: local-first + tag policy](#release-policy-local-first--tag-policy).
+
 This runs the required release-sanity sequence:
 
 1. `mix json_liveview_render.check_metadata`
@@ -384,6 +386,27 @@ To discover available release/CI helpers:
 ```bash
 make help
 ```
+
+## Release policy: local-first + tag policy
+
+Use the same branch for local experimentation as development, and keep iteration tag-free.
+
+- Local/experimental work:
+  - Always use local checks (`make ci-local`, `mix test`, etc.).
+  - Keep work on the branch only.
+  - Do not run `mix hex.publish`.
+  - Do not push tags.
+  - Normal local/experimental work expects `no tag push`.
+
+- Release candidate path:
+  - Prepare the version and changelog for release intent.
+  - Run `make release-check`.
+  - Keep iterative fixes local until `make release-check` is fully green.
+
+- External publish/release trigger:
+  - Only after the above checks pass and a maintainer explicitly approves a release, run `mix hex.publish`.
+  - After publish is complete, create and push the annotated `vX.Y.Z` tag to mark the released version.
+  - Tag pushes are release-only and should not be used to validate local experiments.
 
 ## Development Checks
 
