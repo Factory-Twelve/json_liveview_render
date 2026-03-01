@@ -81,6 +81,10 @@ defmodule JsonLiveviewRender.Spec do
 
   defp parse_spec(_), do: {:error, [{:invalid_spec, "spec must be a map or JSON string"}]}
 
+  defp normalize_spec_map(%{"root" => root, "elements" => elements} = spec)
+       when (is_binary(root) or is_nil(root)) and is_map(elements),
+       do: spec
+
   defp normalize_spec_map(spec) do
     root = Map.get(spec, :root) || Map.get(spec, "root")
     elements = Map.get(spec, :elements) || Map.get(spec, "elements")

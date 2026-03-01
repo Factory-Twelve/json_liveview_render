@@ -77,6 +77,22 @@ defmodule JsonLiveviewRender.SpecTest do
            end) =~ "ignoring unknown prop"
   end
 
+  test "pre-normalized string-key specs do not crash on non-string prop keys" do
+    spec = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{{:bad, :key} => true},
+          "children" => []
+        }
+      }
+    }
+
+    assert {:error, reasons} = Spec.validate(spec, Catalog)
+    assert is_list(reasons)
+  end
+
   property "acyclic linear chain specs validate" do
     check all(spec <- Generators.valid_linear_spec(max_len: 20)) do
       assert {:ok, _} = Spec.validate(spec, Catalog)
