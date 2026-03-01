@@ -323,6 +323,30 @@ defmodule JsonLiveviewRender.Spec.AutoFixTest do
       assert Map.has_key?(fixed["elements"], inspect(malformed_id))
     end
 
+    test "handles nil or non-string type without crashing catalog lookup" do
+      spec = %{
+        "root" => "m_1",
+        "elements" => %{
+          "m_1" => %{
+            "type" => nil,
+            "props" => %{"label" => "Rev"},
+            "children" => []
+          },
+          "m_2" => %{
+            "type" => 123,
+            "props" => %{},
+            "children" => []
+          }
+        }
+      }
+
+      {:ok, fixed, _fixes} = Spec.auto_fix(spec, Catalog)
+
+      # nil is an atom, so it gets stringified to "nil" during normalization
+      assert fixed["elements"]["m_1"]["type"] == "nil"
+      assert fixed["elements"]["m_2"]["type"] == 123
+    end
+
     test "handles malformed non-map root element during orphan traversal" do
       spec = %{
         "root" => "bad_root",

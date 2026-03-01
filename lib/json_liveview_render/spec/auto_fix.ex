@@ -67,7 +67,7 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
     end)
   end
 
-  defp fix_element(id, %{"type" => type} = element, catalog) do
+  defp fix_element(id, %{"type" => type} = element, catalog) when is_binary(type) do
     {children, children_fixes} = fix_children(id, element)
     element = Map.put(element, "children", children)
 
@@ -79,6 +79,11 @@ defmodule JsonLiveviewRender.Spec.AutoFix do
       nil ->
         {element, children_fixes}
     end
+  end
+
+  defp fix_element(id, %{"type" => _type} = element, _catalog) do
+    {children, children_fixes} = fix_children(id, element)
+    {Map.put(element, "children", children), children_fixes}
   end
 
   defp fix_element(_id, element, _catalog), do: {element, []}
