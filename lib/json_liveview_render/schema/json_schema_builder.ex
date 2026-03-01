@@ -61,7 +61,9 @@ defmodule JsonLiveviewRender.Schema.JSONSchemaBuilder do
 
     required =
       props
-      |> Enum.filter(fn {_name, %PropDef{required: required?}} -> required? end)
+      |> Enum.filter(fn {_name, %PropDef{required: required?, default: default}} ->
+        required? and is_nil(default)
+      end)
       |> Enum.map(fn {name, _} -> Atom.to_string(name) end)
       |> Enum.sort()
 

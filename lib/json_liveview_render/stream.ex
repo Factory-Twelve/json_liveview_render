@@ -154,16 +154,28 @@ defmodule JsonLiveviewRender.Stream do
 
   defp normalize_stream_element(element) do
     type = Map.get(element, "type") || Map.get(element, :type)
-    props = Map.get(element, "props") || Map.get(element, :props) || %{}
-    children = Map.get(element, "children") || Map.get(element, :children) || []
+    props = Map.get(element, "props", Map.get(element, :props, %{}))
+    children = Map.get(element, "children", Map.get(element, :children, []))
 
     %{
       "type" => if(is_atom(type), do: Atom.to_string(type), else: type),
       "props" => normalize_map_keys(props),
-      "children" => Enum.map(children, &to_string/1)
+      "children" => normalize_children(children)
     }
   end
 
-  defp normalize_map_keys(map) when is_map(map),
-    do: Map.new(map, fn {k, v} -> {to_string(k), v} end)
+  defp normalize_map_keys(map) when is_map(map) do
+    Map.new(map, fn {k, v} -> {stringify_key(k), v} end)
+  end
+
+  defp normalize_map_keys(value), do: value
+
+  defp normalize_children(children) when is_list(children), do: Enum.map(children, &to_string/1)
+  defp normalize_children(value), do: value
+
+  defp stringify_key(key) do
+    to_string(key)
+  rescue
+    _ -> inspect(key)
+  end
 end
