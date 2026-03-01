@@ -13,6 +13,7 @@ defmodule JsonLiveviewRender.Benchmark.Suite.ValidateTest do
 
     assert is_map(result)
     assert map_size(result) == 3
+
     assert %{
              name: "validate",
              status: :ok,
