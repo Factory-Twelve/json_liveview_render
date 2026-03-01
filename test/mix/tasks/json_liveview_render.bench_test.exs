@@ -57,7 +57,7 @@ defmodule Mix.Tasks.JsonLiveviewRender.BenchTest do
           "--suites",
           "validate",
           "--node-count",
-          "20",
+          "15",
           "--depth",
           "4",
           "--branching-factor",

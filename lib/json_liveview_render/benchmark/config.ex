@@ -88,25 +88,24 @@ defmodule JsonLiveviewRender.Benchmark.Config do
       |> Keyword.delete(:columns)
       |> Keyword.delete(:metrics_per_column)
     else
-      maybe_sections = Keyword.fetch(options, :sections)
-      maybe_columns = Keyword.fetch(options, :columns)
-      maybe_metrics_per_column = Keyword.fetch(options, :metrics_per_column)
+      has_legacy_option? =
+        Enum.any?([:sections, :columns, :metrics_per_column], &Keyword.has_key?(options, &1))
 
-      if maybe_sections == :error or maybe_columns == :error or maybe_metrics_per_column == :error do
-        options
-      else
+      if has_legacy_option? do
         options
         |> Keyword.put_new(
           :node_count,
           compute_legacy_node_count(
-            maybe_sections,
-            maybe_columns,
-            maybe_metrics_per_column
+            Keyword.get(options, :sections, @default_sections),
+            Keyword.get(options, :columns, @default_columns),
+            Keyword.get(options, :metrics_per_column, @default_metrics_per_column)
           )
-        )
+          )
         |> Keyword.delete(:sections)
         |> Keyword.delete(:columns)
         |> Keyword.delete(:metrics_per_column)
+      else
+        options
       end
     end
   end
