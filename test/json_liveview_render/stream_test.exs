@@ -54,12 +54,15 @@ defmodule JsonLiveviewRender.StreamTest do
   test "ingest rejects invalid element events" do
     {:ok, stream} = Stream.ingest(Stream.new(), {:root, "metric_1"}, Catalog)
 
-    assert {:error, {:missing_required_prop, _}} =
+    assert {:error, reasons} =
              Stream.ingest(
                stream,
                {:element, "metric_1", %{"type" => "metric", "props" => %{}}},
                Catalog
              )
+
+    assert is_list(reasons)
+    assert Enum.any?(reasons, fn {tag, _message} -> tag == :missing_required_prop end)
   end
 
   test "finalize marks stream complete" do
@@ -154,9 +157,11 @@ defmodule JsonLiveviewRender.StreamTest do
       {:element, "metric_1", %{"type" => "metric", "props" => %{}}}
     ]
 
-    assert {:error, {:missing_required_prop, _}, stream} =
+    assert {:error, reasons, stream} =
              Stream.ingest_many(Stream.new(), events, Catalog)
 
+    assert is_list(reasons)
+    assert Enum.any?(reasons, fn {tag, _message} -> tag == :missing_required_prop end)
     assert stream.root == "page"
     refute Map.has_key?(stream.elements, "metric_1")
   end

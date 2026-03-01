@@ -119,6 +119,7 @@ defmodule JsonLiveviewRender.Spec do
   defp normalize_children(children) when is_list(children), do: Enum.map(children, &to_string/1)
   defp normalize_children(children), do: children
 
+  defp normalize_root(nil), do: nil
   defp normalize_root(root) when is_atom(root), do: Atom.to_string(root)
   defp normalize_root(root), do: root
 
