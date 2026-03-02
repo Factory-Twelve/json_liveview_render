@@ -283,4 +283,15 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
             {:invalid_destination_url, :slack, {:private_destination, "sandbox.slack.test"}}} =
              HTTP.deliver(:slack, %{"blocks" => []}, context)
   end
+
+  test "blocks IPv4-mapped IPv6 private destinations" do
+    context = %{
+      http_client: CaptureHTTPClient,
+      teams: %{webhook_url: "https://[::ffff:127.0.0.1]/hook"}
+    }
+
+    assert {:error,
+            {:invalid_destination_url, :teams, {:private_destination, "::ffff:127.0.0.1"}}} =
+             HTTP.deliver(:teams, %{"type" => "AdaptiveCard"}, context)
+  end
 end

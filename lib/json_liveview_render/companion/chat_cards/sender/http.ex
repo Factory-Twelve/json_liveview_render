@@ -486,9 +486,17 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
   defp private_ip?({a, b, c, d, e, f, g, h}) do
     {a, b, c, d, e, f, g, h} == {0, 0, 0, 0, 0, 0, 0, 0} or
       {a, b, c, d, e, f, g, h} == {0, 0, 0, 0, 0, 0, 0, 1} or
+      private_ipv4_mapped_ipv6?({a, b, c, d, e, f, g, h}) or
       (a &&& 0xFE00) == 0xFC00 or
       (a &&& 0xFFC0) == 0xFE80
   end
+
+  defp private_ipv4_mapped_ipv6?({0, 0, 0, 0, 0, 0xFFFF, g, h}) do
+    ipv4 = {g >>> 8 &&& 0xFF, g &&& 0xFF, h >>> 8 &&& 0xFF, h &&& 0xFF}
+    private_ip?(ipv4)
+  end
+
+  defp private_ipv4_mapped_ipv6?(_), do: false
 
   defp decode_json(body) when is_binary(body) do
     case Jason.decode(body) do

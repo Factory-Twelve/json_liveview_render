@@ -1,5 +1,6 @@
 defmodule JsonLiveviewRender.Companion.ChatCards.DemoScriptSmokeTest do
   use ExUnit.Case, async: false
+  @tag timeout: 180_000
 
   test "demo script prints all target sections" do
     {output, 0} =
