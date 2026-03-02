@@ -77,11 +77,11 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: CaptureHTTPClient,
-      slack: %{bot_token: "xoxb-token", channel: "C123", base_url: "https://slack.test/api"}
+      slack: %{bot_token: "xoxb-token", channel: "C123", base_url: "https://slack.com/api"}
     }
 
     assert {:ok, response} = HTTP.deliver(:slack, payload, context)
-    assert response["request"]["url"] == "https://slack.test/api/chat.postMessage"
+    assert response["request"]["url"] == "https://slack.com/api/chat.postMessage"
     assert response["request"]["body"]["channel"] == "C123"
     assert response["request"]["body"]["blocks"] == payload["blocks"]
     assert response["request"]["body"]["text"] == "QC Alert - Body line"
@@ -95,7 +95,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
     context = %{
       http_client: CaptureHTTPClient,
       idempotency: %{enabled: true, key: "rc1"},
-      slack: %{bot_token: "xoxb-token", channel: "C123", base_url: "https://slack.test/api"}
+      slack: %{bot_token: "xoxb-token", channel: "C123", base_url: "https://slack.com/api"}
     }
 
     assert {:ok, response} = HTTP.deliver(:slack, payload, context)
@@ -115,11 +115,11 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: CaptureHTTPClient,
-      slack: %{bot_token: "xoxb-token", user_id: "U123", base_url: "https://slack.test/api"}
+      slack: %{bot_token: "xoxb-token", user_id: "U123", base_url: "https://slack.com/api"}
     }
 
     assert {:ok, response} = HTTP.deliver(:slack, payload, context)
-    assert response["request"]["url"] == "https://slack.test/api/views.publish"
+    assert response["request"]["url"] == "https://slack.com/api/views.publish"
     assert response["request"]["body"]["user_id"] == "U123"
     assert response["request"]["body"]["view"] == payload
   end
@@ -129,11 +129,11 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: CaptureHTTPClient,
-      teams: %{webhook_url: "https://teams.test/webhook"}
+      teams: %{webhook_url: "https://outlook.office.com/webhook"}
     }
 
     assert {:ok, response} = HTTP.deliver(:teams, payload, context)
-    assert response["request"]["url"] == "https://teams.test/webhook"
+    assert response["request"]["url"] == "https://outlook.office.com/webhook"
 
     [attachment] = response["request"]["body"]["attachments"]
     assert attachment["contentType"] == "application/vnd.microsoft.card.adaptive"
@@ -149,13 +149,13 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
         access_token: "wa-token",
         phone_number_id: "12345",
         to: "15551234567",
-        graph_base_url: "https://graph.test",
+        graph_base_url: "https://graph.facebook.com",
         api_version: "v99.0"
       }
     }
 
     assert {:ok, response} = HTTP.deliver(:whatsapp, payload, context)
-    assert response["request"]["url"] == "https://graph.test/v99.0/12345/messages"
+    assert response["request"]["url"] == "https://graph.facebook.com/v99.0/12345/messages"
     assert response["request"]["body"]["to"] == "15551234567"
     assert response["request"]["body"]["type"] == "interactive"
   end
@@ -178,7 +178,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
   test "returns structured HTTP status errors" do
     context = %{
       http_client: StatusErrorHTTPClient,
-      teams: %{webhook_url: "https://teams.test/webhook"}
+      teams: %{webhook_url: "https://outlook.office.com/webhook"}
     }
 
     assert {:error, {:http_error, :teams, 500, "boom"}} =
@@ -192,7 +192,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
       http_client: FlakyHTTPClient,
       sleep_fn: fn _ms -> :ok end,
       retry: %{max_attempts: 3, base_delay_ms: 1},
-      teams: %{webhook_url: "https://teams.test/webhook"}
+      teams: %{webhook_url: "https://outlook.office.com/webhook"}
     }
 
     assert {:ok, %{"ok" => true}} = HTTP.deliver(:teams, %{"type" => "AdaptiveCard"}, context)
@@ -213,5 +213,40 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
              HTTP.deliver(:whatsapp, %{"type" => "interactive"}, context)
 
     assert Process.get(:request_fail_attempt) == 2
+  end
+
+  test "blocks disallowed Slack host by default" do
+    context = %{
+      http_client: CaptureHTTPClient,
+      slack: %{bot_token: "xoxb-token", channel: "C123", base_url: "https://attacker.test/api"}
+    }
+
+    assert {:error, {:invalid_destination_url, :slack, {:disallowed_host, "attacker.test"}}} =
+             HTTP.deliver(:slack, %{"blocks" => []}, context)
+  end
+
+  test "blocks localhost/private destination by default" do
+    context = %{
+      http_client: CaptureHTTPClient,
+      teams: %{webhook_url: "https://127.0.0.1/hook"}
+    }
+
+    assert {:error, {:invalid_destination_url, :teams, {:private_destination, "127.0.0.1"}}} =
+             HTTP.deliver(:teams, %{"type" => "AdaptiveCard"}, context)
+  end
+
+  test "allows custom host when explicitly allowlisted" do
+    context = %{
+      http_client: CaptureHTTPClient,
+      slack: %{
+        bot_token: "xoxb-token",
+        channel: "C123",
+        base_url: "https://sandbox.slack.test/api",
+        allowed_hosts: ["sandbox.slack.test"]
+      }
+    }
+
+    assert {:ok, response} = HTTP.deliver(:slack, %{"blocks" => []}, context)
+    assert response["request"]["url"] == "https://sandbox.slack.test/api/chat.postMessage"
   end
 end

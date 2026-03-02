@@ -11,6 +11,12 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
   - `:http_client` custom module implementing
     `JsonLiveviewRender.Companion.ChatCards.Sender.HTTPClient`
   - `:slack.base_url`, `:whatsapp.graph_base_url`, `:whatsapp.api_version`
+  - URL security controls:
+    - per-target `allowed_hosts` to extend default destination host allowlists
+    - `allow_insecure_http` to permit `http://` destinations
+    - `allow_private_destinations` to permit localhost/private IP destinations
+    - `disable_host_allowlist` to bypass host allowlist checks
+    - global defaults via `context[:url_security]` with the same keys
   - `:timeout` and per-target timeout overrides (`:slack.timeout`, etc.)
   - `:retry` and per-target `:retry` (`max_attempts`, `base_delay_ms`, `max_delay_ms`)
   - `:idempotency` and per-target idempotency (`idempotency_key`, `idempotency_header`)
@@ -18,9 +24,23 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
 
   @behaviour JsonLiveviewRender.Companion.ChatCards.Sender
 
+  import Bitwise
+
   alias JsonLiveviewRender.Companion.ChatCards.Sender.HTTPClient.Default, as: DefaultHTTPClient
 
   @type target :: :slack | :teams | :whatsapp
+
+  @default_allowed_hosts %{
+    slack: ["slack.com", "*.slack.com", "slack-gov.com", "*.slack-gov.com"],
+    teams: [
+      "*.office.com",
+      "*.office365.com",
+      "*.teams.microsoft.com",
+      "*.microsoft.com",
+      "*.azure.com"
+    ],
+    whatsapp: ["graph.facebook.com"]
+  }
 
   @doc """
   Delivers a compiled platform payload to the configured HTTP endpoint.
@@ -47,7 +67,8 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
 
   defp build_request(:slack, payload, config, context) do
     with {:ok, bot_token} <- fetch_required(config, :bot_token),
-         {:ok, endpoint_url, request_body} <- slack_endpoint_and_body(payload, config, context) do
+         {:ok, endpoint_url, request_body} <- slack_endpoint_and_body(payload, config, context),
+         {:ok, endpoint_url} <- validate_destination_url(endpoint_url, :slack, config, context) do
       {:ok,
        %{
          url: endpoint_url,
@@ -61,7 +82,8 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
   end
 
   defp build_request(:teams, payload, config, context) do
-    with {:ok, webhook_url} <- fetch_required(config, :webhook_url) do
+    with {:ok, webhook_url} <- fetch_required(config, :webhook_url),
+         {:ok, webhook_url} <- validate_destination_url(webhook_url, :teams, config, context) do
       body = %{
         "type" => "message",
         "attachments" => [
@@ -98,23 +120,26 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
       endpoint_url =
         "#{String.trim_trailing(graph_base_url, "/")}/#{api_version}/#{phone_number_id}/messages"
 
-      body =
-        payload
-        |> Map.put("to", to)
-        |> Map.put_new("messaging_product", "whatsapp")
-        |> Map.put_new("recipient_type", "individual")
+      with {:ok, endpoint_url} <-
+             validate_destination_url(endpoint_url, :whatsapp, config, context) do
+        body =
+          payload
+          |> Map.put("to", to)
+          |> Map.put_new("messaging_product", "whatsapp")
+          |> Map.put_new("recipient_type", "individual")
 
-      {:ok,
-       %{
-         url: endpoint_url,
-         headers:
-           [
-             {"authorization", "Bearer #{access_token}"},
-             {"content-type", "application/json"}
-           ] ++ idempotency_headers(config, context, :whatsapp, payload),
-         body: Jason.encode!(body),
-         timeout: Map.get(config, :timeout)
-       }}
+        {:ok,
+         %{
+           url: endpoint_url,
+           headers:
+             [
+               {"authorization", "Bearer #{access_token}"},
+               {"content-type", "application/json"}
+             ] ++ idempotency_headers(config, context, :whatsapp, payload),
+           body: Jason.encode!(body),
+           timeout: Map.get(config, :timeout)
+         }}
+      end
     end
   end
 
@@ -226,6 +251,171 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
   end
 
   defp normalize_headers(_), do: []
+
+  defp validate_destination_url(url, target, config, context) do
+    policy = url_security_policy(target, config, context)
+
+    with {:ok, normalized_uri} <- parse_and_validate_uri(url, policy),
+         :ok <- validate_destination_host(normalized_uri.host, target, policy) do
+      {:ok, URI.to_string(normalized_uri)}
+    else
+      {:error, reason} -> {:error, {:invalid_destination_url, target, reason}}
+    end
+  end
+
+  defp parse_and_validate_uri(url, policy) when is_binary(url) do
+    uri = URI.parse(url)
+
+    cond do
+      not is_binary(uri.scheme) ->
+        {:error, :missing_scheme}
+
+      uri.scheme == "https" ->
+        validate_uri_host(uri)
+
+      uri.scheme == "http" and policy.allow_insecure_http ->
+        validate_uri_host(uri)
+
+      uri.scheme == "http" ->
+        {:error, :insecure_scheme}
+
+      true ->
+        {:error, {:unsupported_scheme, uri.scheme}}
+    end
+  end
+
+  defp parse_and_validate_uri(_url, _policy), do: {:error, :invalid_url}
+
+  defp validate_uri_host(%URI{host: host, userinfo: nil} = uri)
+       when is_binary(host) and host != "" do
+    {:ok, %{uri | host: String.downcase(host)}}
+  end
+
+  defp validate_uri_host(%URI{userinfo: userinfo}) when is_binary(userinfo),
+    do: {:error, :userinfo_not_allowed}
+
+  defp validate_uri_host(_uri), do: {:error, :missing_host}
+
+  defp validate_destination_host(host, target, policy) do
+    with :ok <- reject_private_destination(host, policy),
+         :ok <- enforce_allowlist(host, target, policy) do
+      :ok
+    end
+  end
+
+  defp reject_private_destination(_host, %{allow_private_destinations: true}), do: :ok
+
+  defp reject_private_destination(host, _policy) do
+    cond do
+      localhost_host?(host) ->
+        {:error, {:private_destination, host}}
+
+      private_ip_host?(host) ->
+        {:error, {:private_destination, host}}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp enforce_allowlist(_host, _target, %{disable_host_allowlist: true}), do: :ok
+
+  defp enforce_allowlist(host, target, policy) do
+    allowed_hosts = Map.get(policy.allowed_hosts_by_target, target, [])
+
+    if Enum.any?(allowed_hosts, &host_matches_pattern?(host, &1)) do
+      :ok
+    else
+      {:error, {:disallowed_host, host}}
+    end
+  end
+
+  defp url_security_policy(target, config, context) do
+    context_policy = Map.get(context, :url_security, %{})
+    target_defaults = Map.get(@default_allowed_hosts, target, [])
+
+    %{
+      allow_insecure_http: boolean_option(config, context_policy, :allow_insecure_http, false),
+      allow_private_destinations:
+        boolean_option(config, context_policy, :allow_private_destinations, false),
+      disable_host_allowlist:
+        boolean_option(config, context_policy, :disable_host_allowlist, false),
+      allowed_hosts_by_target: %{
+        target =>
+          target_defaults
+          |> Kernel.++(normalize_host_patterns(Map.get(context_policy, :allowed_hosts)))
+          |> Kernel.++(normalize_host_patterns(Map.get(config, :allowed_hosts)))
+          |> Enum.uniq()
+      }
+    }
+  end
+
+  defp boolean_option(config, context_policy, key, default) do
+    value = Map.get(config, key, Map.get(context_policy, key, default))
+    value == true
+  end
+
+  defp normalize_host_patterns(patterns) when is_list(patterns) do
+    patterns
+    |> Enum.map(&normalize_host_pattern/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp normalize_host_patterns(_patterns), do: []
+
+  defp normalize_host_pattern(pattern) when is_binary(pattern) do
+    normalized =
+      pattern
+      |> String.trim()
+      |> String.downcase()
+
+    if normalized == "", do: nil, else: normalized
+  end
+
+  defp normalize_host_pattern(_pattern), do: nil
+
+  defp host_matches_pattern?(host, pattern) do
+    cond do
+      String.starts_with?(pattern, "*.") ->
+        suffix = String.trim_leading(pattern, "*.")
+        host == suffix or String.ends_with?(host, ".#{suffix}")
+
+      true ->
+        host == pattern
+    end
+  end
+
+  defp localhost_host?(host) do
+    host == "localhost" or String.ends_with?(host, ".localhost")
+  end
+
+  defp private_ip_host?(host) do
+    case :inet.parse_address(String.to_charlist(host)) do
+      {:ok, ip} -> private_ip?(ip)
+      {:error, _} -> false
+    end
+  end
+
+  defp private_ip?({a, b, _c, _d}) do
+    cond do
+      a == 10 -> true
+      a == 127 -> true
+      a == 0 -> true
+      a == 169 and b == 254 -> true
+      a == 172 and b >= 16 and b <= 31 -> true
+      a == 192 and b == 168 -> true
+      a == 100 and b >= 64 and b <= 127 -> true
+      a == 198 and (b == 18 or b == 19) -> true
+      true -> false
+    end
+  end
+
+  defp private_ip?({a, b, c, d, e, f, g, h}) do
+    {a, b, c, d, e, f, g, h} == {0, 0, 0, 0, 0, 0, 0, 0} or
+      {a, b, c, d, e, f, g, h} == {0, 0, 0, 0, 0, 0, 0, 1} or
+      (a &&& 0xFE00) == 0xFC00 or
+      (a &&& 0xFFC0) == 0xFE80
+  end
 
   defp decode_json(body) when is_binary(body) do
     case Jason.decode(body) do
