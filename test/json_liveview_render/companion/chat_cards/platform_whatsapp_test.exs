@@ -28,4 +28,23 @@ defmodule JsonLiveviewRender.Companion.ChatCards.PlatformWhatsAppTest do
     assert result.outputs.whatsapp ==
              FixtureHelper.expected_fixture("whatsapp/qc_alert_list.json")
   end
+
+  test "falls back to text payload when no actions are present" do
+    spec =
+      FixtureHelper.input_spec()
+      |> put_in(["elements", "alert_card", "children"], ["severity", "detail", "impact"])
+
+    assert {:ok, result} =
+             ChatCards.compile(spec,
+               catalog: JsonLiveviewRenderTest.Companion.ChatCards.Catalog,
+               current_user: %{role: :member},
+               targets: [:whatsapp],
+               whatsapp_mode: :auto
+             )
+
+    assert result.outputs.whatsapp["type"] == "text"
+    assert result.outputs.whatsapp["text"]["body"] =~ "QC Alert"
+    assert result.actions == []
+    assert Enum.any?(result.warnings, &(&1.code == :whatsapp_no_actions_fallback))
+  end
 end

@@ -67,6 +67,8 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
     end
   end
 
+  defp public_dns_resolver(_host), do: {:ok, [{198, 51, 100, 42}]}
+
   test "delivers Slack message payload to chat.postMessage" do
     payload = %{
       "blocks" => [
@@ -77,6 +79,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: CaptureHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       slack: %{bot_token: "xoxb-token", channel: "C123", base_url: "https://slack.com/api"}
     }
 
@@ -94,6 +97,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: CaptureHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       idempotency: %{enabled: true, key: "rc1"},
       slack: %{bot_token: "xoxb-token", channel: "C123", base_url: "https://slack.com/api"}
     }
@@ -115,6 +119,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: CaptureHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       slack: %{bot_token: "xoxb-token", user_id: "U123", base_url: "https://slack.com/api"}
     }
 
@@ -129,6 +134,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: CaptureHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       teams: %{webhook_url: "https://outlook.office.com/webhook"}
     }
 
@@ -145,6 +151,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: CaptureHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       whatsapp: %{
         access_token: "wa-token",
         phone_number_id: "12345",
@@ -168,6 +175,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
   test "returns Slack API error when ok=false" do
     context = %{
       http_client: SlackErrorHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       slack: %{bot_token: "xoxb-token", channel: "C123"}
     }
 
@@ -178,6 +186,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
   test "returns structured HTTP status errors" do
     context = %{
       http_client: StatusErrorHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       teams: %{webhook_url: "https://outlook.office.com/webhook"}
     }
 
@@ -190,6 +199,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: FlakyHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       sleep_fn: fn _ms -> :ok end,
       retry: %{max_attempts: 3, base_delay_ms: 1},
       teams: %{webhook_url: "https://outlook.office.com/webhook"}
@@ -204,6 +214,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     context = %{
       http_client: AlwaysRequestFailHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       sleep_fn: fn _ms -> :ok end,
       retry: %{max_attempts: 2, base_delay_ms: 1},
       whatsapp: %{access_token: "wa-token", phone_number_id: "123", to: "15551234567"}
@@ -218,6 +229,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
   test "blocks disallowed Slack host by default" do
     context = %{
       http_client: CaptureHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       slack: %{bot_token: "xoxb-token", channel: "C123", base_url: "https://attacker.test/api"}
     }
 
@@ -228,6 +240,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
   test "blocks localhost/private destination by default" do
     context = %{
       http_client: CaptureHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       teams: %{webhook_url: "https://127.0.0.1/hook"}
     }
 
@@ -238,6 +251,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
   test "allows custom host when explicitly allowlisted" do
     context = %{
       http_client: CaptureHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
       slack: %{
         bot_token: "xoxb-token",
         channel: "C123",
@@ -248,5 +262,25 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
 
     assert {:ok, response} = HTTP.deliver(:slack, %{"blocks" => []}, context)
     assert response["request"]["url"] == "https://sandbox.slack.test/api/chat.postMessage"
+  end
+
+  test "blocks allowlisted hostname that resolves to private address" do
+    context = %{
+      http_client: CaptureHTTPClient,
+      dns_resolver: fn
+        "sandbox.slack.test" -> {:ok, [{127, 0, 0, 1}]}
+        _ -> {:ok, [{198, 51, 100, 42}]}
+      end,
+      slack: %{
+        bot_token: "xoxb-token",
+        channel: "C123",
+        base_url: "https://sandbox.slack.test/api",
+        allowed_hosts: ["sandbox.slack.test"]
+      }
+    }
+
+    assert {:error,
+            {:invalid_destination_url, :slack, {:private_destination, "sandbox.slack.test"}}} =
+             HTTP.deliver(:slack, %{"blocks" => []}, context)
   end
 end

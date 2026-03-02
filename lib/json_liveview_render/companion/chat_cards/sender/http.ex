@@ -305,12 +305,15 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
 
   defp reject_private_destination(_host, %{allow_private_destinations: true}), do: :ok
 
-  defp reject_private_destination(host, _policy) do
+  defp reject_private_destination(host, policy) do
     cond do
       localhost_host?(host) ->
         {:error, {:private_destination, host}}
 
       private_ip_host?(host) ->
+        {:error, {:private_destination, host}}
+
+      dns_resolves_private_ip?(host, policy) ->
         {:error, {:private_destination, host}}
 
       true ->
@@ -340,6 +343,8 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
         boolean_option(config, context_policy, :allow_private_destinations, false),
       disable_host_allowlist:
         boolean_option(config, context_policy, :disable_host_allowlist, false),
+      resolve_hostnames: boolean_option(config, context_policy, :resolve_hostnames, true),
+      dns_resolver: resolve_dns_resolver(config, context_policy, context),
       allowed_hosts_by_target: %{
         target =>
           target_defaults
@@ -353,6 +358,15 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
   defp boolean_option(config, context_policy, key, default) do
     value = Map.get(config, key, Map.get(context_policy, key, default))
     value == true
+  end
+
+  defp resolve_dns_resolver(config, context_policy, context) do
+    resolver =
+      Map.get(config, :dns_resolver) ||
+        Map.get(context_policy, :dns_resolver) ||
+        Map.get(context, :dns_resolver)
+
+    if is_function(resolver, 1), do: resolver, else: &default_dns_resolver/1
   end
 
   defp normalize_host_patterns(patterns) when is_list(patterns) do
@@ -395,6 +409,65 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
       {:error, _} -> false
     end
   end
+
+  defp dns_resolves_private_ip?(_host, %{resolve_hostnames: false}), do: false
+
+  defp dns_resolves_private_ip?(host, %{dns_resolver: resolver}) do
+    case :inet.parse_address(String.to_charlist(host)) do
+      {:ok, _ip_literal} ->
+        false
+
+      {:error, _} ->
+        case safe_dns_resolve(resolver, host) do
+          {:ok, addresses} -> Enum.any?(addresses, &private_ip?/1)
+          {:error, _reason} -> false
+        end
+    end
+  end
+
+  defp safe_dns_resolve(resolver, host) do
+    result = resolver.(host)
+
+    case result do
+      {:ok, addresses} when is_list(addresses) ->
+        {:ok, Enum.filter(addresses, &ip_tuple?/1)}
+
+      {:error, reason} ->
+        {:error, reason}
+
+      addresses when is_list(addresses) ->
+        {:ok, Enum.filter(addresses, &ip_tuple?/1)}
+
+      _ ->
+        {:error, :invalid_dns_resolver_response}
+    end
+  rescue
+    _ -> {:error, :dns_lookup_failed}
+  end
+
+  defp default_dns_resolver(host) when is_binary(host) do
+    hostname = String.to_charlist(host)
+
+    ipv4 =
+      case :inet.getaddrs(hostname, :inet) do
+        {:ok, addrs} -> addrs
+        _ -> []
+      end
+
+    ipv6 =
+      case :inet.getaddrs(hostname, :inet6) do
+        {:ok, addrs} -> addrs
+        _ -> []
+      end
+
+    case ipv4 ++ ipv6 do
+      [] -> {:error, :dns_not_resolved}
+      addrs -> {:ok, addrs}
+    end
+  end
+
+  defp ip_tuple?(tuple) when is_tuple(tuple) and tuple_size(tuple) in [4, 8], do: true
+  defp ip_tuple?(_), do: false
 
   defp private_ip?({a, b, _c, _d}) do
     cond do
