@@ -7,6 +7,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Platform.WhatsApp do
 
   alias JsonLiveviewRender.Companion.ChatCards.IR
   alias JsonLiveviewRender.Companion.ChatCards.Platform.Limits
+  alias JsonLiveviewRender.Companion.ChatCards.Warnings
 
   @doc false
   @impl true
@@ -25,13 +26,36 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Platform.WhatsApp do
     {body_text, body_warnings} =
       Limits.truncate_text(message, 1024, :whatsapp, ["interactive", "body", "text"])
 
-    case resolved_mode do
-      :buttons ->
-        render_buttons(body_text, body_warnings, action_items)
+    if action_items == [] do
+      render_text_fallback(body_text, body_warnings)
+    else
+      case resolved_mode do
+        :buttons ->
+          render_buttons(body_text, body_warnings, action_items)
 
-      :list ->
-        render_list(body_text, body_warnings, action_items)
+        :list ->
+          render_list(body_text, body_warnings, action_items)
+      end
     end
+  end
+
+  defp render_text_fallback(body_text, body_warnings) do
+    warning =
+      Warnings.new(
+        :whatsapp_no_actions_fallback,
+        :whatsapp,
+        ["interactive", "action"],
+        "no actions available; falling back to text payload",
+        %{}
+      )
+
+    payload = %{
+      "messaging_product" => "whatsapp",
+      "type" => "text",
+      "text" => %{"body" => body_text}
+    }
+
+    {:ok, payload, body_warnings ++ [warning], []}
   end
 
   defp render_buttons(body_text, body_warnings, action_items) do

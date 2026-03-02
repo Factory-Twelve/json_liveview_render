@@ -52,5 +52,10 @@ Context shape for `compile_and_send/2`:
 Optional:
 - `http_client` to inject a custom transport module
 - per-target overrides (`slack.base_url`, `whatsapp.api_version`, etc.)
+- URL security controls (global via `url_security`, or per-target overrides):
+  - `allowed_hosts` (extends target default allowlist)
+  - `allow_insecure_http` (default `false`)
+  - `allow_private_destinations` (default `false`)
+  - `disable_host_allowlist` (default `false`)
 - retries via `retry: %{max_attempts, base_delay_ms, max_delay_ms, multiplier}`
 - idempotency via `idempotency: %{enabled, key, header}` and per-target overrides
