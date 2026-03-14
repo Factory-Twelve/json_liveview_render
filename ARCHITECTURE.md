@@ -73,11 +73,16 @@ Each canonical element is a map with exactly three operative fields:
 - `props`: map with string keys and JSON-like values.
 - `children`: ordered list of child element ids.
 
-Normalization rules:
+Canonical element shape requires `props` and `children` to be present.
 
-- Missing `props` normalizes to `%{}`.
-- Missing `children` normalizes to `[]`.
-- Atom keys in ids or props are stringified during normalization.
+Ingress/normalization notes:
+
+- Canonical producers should emit `props` as a map and `children` as a list,
+  even when they are empty.
+- Some non-canonical ingress paths may fill default `props` or `children`
+  values before a document reaches canonical form, but the current string-keyed
+  validator path expects those keys to already be present.
+- Atom keys in ids or props may be stringified during normalization.
 - Unknown element-level fields are non-operative in v1 and are not part of the
   canonical contract.
 
