@@ -15,7 +15,7 @@ defmodule JsonLiveviewRender.Spec do
   alias JsonLiveviewRender.Catalog.PropDef
   alias JsonLiveviewRender.Spec.AutoFix
   alias JsonLiveviewRender.Spec.Errors
-  alias JsonLiveviewRender.Spec.Normalizer
+  alias JsonLiveviewRender.Spec.Normalize
 
   @type validation_result :: {:ok, map()} | {:error, [term()]}
 
@@ -94,7 +94,7 @@ defmodule JsonLiveviewRender.Spec do
     allow_missing_root? = Keyword.get(opts, :allow_missing_root, false)
     allow_unresolved_children? = Keyword.get(opts, :allow_unresolved_children, false)
 
-    with {:ok, spec_map} <- parse_spec(spec),
+    with {:ok, spec_map} <- Normalize.for_validation(spec),
          {:ok, root, elements} <- validate_structure(spec_map, allow_missing_root?),
          [] <- validate_references(elements, allow_unresolved_children?),
          [] <- detect_cycles(root, elements),
@@ -123,40 +123,6 @@ defmodule JsonLiveviewRender.Spec do
       :ok
     end
   end
-
-  defp parse_spec(spec) when is_map(spec), do: {:ok, normalize_spec_map(spec)}
-
-  defp parse_spec(spec) when is_binary(spec) do
-    case Jason.decode(spec) do
-      {:ok, decoded} -> {:ok, normalize_spec_map(decoded)}
-      {:error, reason} -> {:error, [{:invalid_json, reason}]}
-    end
-  end
-
-  defp parse_spec(_), do: {:error, [{:invalid_spec, "spec must be a map or JSON string"}]}
-
-  defp normalize_spec_map(%{"root" => _root, "elements" => elements} = spec)
-       when is_map(elements),
-       do: spec
-
-  defp normalize_spec_map(spec) do
-    root = Map.get(spec, :root) || Map.get(spec, "root")
-    elements = Map.get(spec, :elements) || Map.get(spec, "elements")
-
-    %{"root" => normalize_root(root), "elements" => normalize_elements(elements)}
-  end
-
-  defp normalize_elements(elements) when is_map(elements) do
-    Map.new(elements, fn {id, element} ->
-      {to_string(id), Normalizer.normalize_element(element)}
-    end)
-  end
-
-  defp normalize_elements(elements), do: elements
-
-  defp normalize_root(nil), do: nil
-  defp normalize_root(root) when is_atom(root), do: Atom.to_string(root)
-  defp normalize_root(root), do: root
 
   defp validate_structure(spec, allow_missing_root?) do
     root = spec["root"]
