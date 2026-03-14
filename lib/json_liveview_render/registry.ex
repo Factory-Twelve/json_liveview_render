@@ -51,12 +51,28 @@ defmodule JsonLiveviewRender.Registry do
         end
       end
 
-    quote bind_quoted: [entries_ast: Macro.escape(kv_entries)] do
+    fetch_clauses =
+      for {type, fun_ast} <- entries do
+        string_type = Atom.to_string(type)
+
+        quote do
+          def __genui_registry_fetch__(unquote(type)), do: {:ok, unquote(fun_ast)}
+          def __genui_registry_fetch__(unquote(string_type)), do: {:ok, unquote(fun_ast)}
+          def __genui_registry_has_mapping__(unquote(type)), do: true
+          def __genui_registry_has_mapping__(unquote(string_type)), do: true
+        end
+      end
+
+    quote do
       def __genui_registry__ do
-        entries = [unquote_splicing(entries_ast)]
+        entries = [unquote_splicing(kv_entries)]
 
         Map.new(entries)
       end
+
+      unquote_splicing(fetch_clauses)
+      def __genui_registry_fetch__(_type), do: :error
+      def __genui_registry_has_mapping__(_type), do: false
 
       def __genui_registry_catalog__, do: @genui_registry_catalog
     end
@@ -65,9 +81,7 @@ defmodule JsonLiveviewRender.Registry do
   @doc "Fetches a registry callback by component type, raises on missing mapping."
   @spec fetch!(module(), atom() | String.t()) :: (map() -> term())
   def fetch!(registry_module, component_type) do
-    type = normalize_runtime_type(registry_module, component_type)
-
-    case Map.fetch(registry_module.__genui_registry__(), type) do
+    case registry_module.__genui_registry_fetch__(component_type) do
       {:ok, callback} ->
         callback
 
@@ -79,18 +93,8 @@ defmodule JsonLiveviewRender.Registry do
 
   @doc "Checks whether a component type is mapped in a registry."
   @spec has_mapping?(module(), atom() | String.t()) :: boolean()
-  def has_mapping?(registry_module, component_type) do
-    type = normalize_runtime_type(registry_module, component_type)
-    Map.has_key?(registry_module.__genui_registry__(), type)
-  end
-
-  defp normalize_runtime_type(_registry_module, type) when is_atom(type), do: type
-
-  defp normalize_runtime_type(registry_module, type) when is_binary(type) do
-    registry_module.__genui_registry__()
-    |> Map.keys()
-    |> Enum.find(fn key -> Atom.to_string(key) == type end)
-  end
+  def has_mapping?(registry_module, component_type),
+    do: registry_module.__genui_registry_has_mapping__(component_type)
 
   defp normalize_type_literal!(type) when is_atom(type), do: type
   defp normalize_type_literal!(type) when is_binary(type), do: String.to_atom(type)

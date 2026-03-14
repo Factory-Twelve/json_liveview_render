@@ -193,8 +193,18 @@ defmodule JsonLiveviewRender.Catalog do
         declared_components
       end
 
-    quote bind_quoted: [components: Macro.escape(components)] do
-      @genui_compiled_components components
+    component_lookup_clauses =
+      for {name, component} <- components do
+        string_name = Atom.to_string(name)
+
+        quote do
+          def component(unquote(name)), do: unquote(Macro.escape(component))
+          def component(unquote(string_name)), do: unquote(Macro.escape(component))
+        end
+      end
+
+    quote do
+      @genui_compiled_components unquote(Macro.escape(components))
 
       @doc false
       def __genui_catalog__, do: @genui_compiled_components
@@ -206,15 +216,8 @@ defmodule JsonLiveviewRender.Catalog do
       def types, do: __genui_catalog__() |> Map.keys() |> Enum.sort()
 
       @doc "Returns a component definition by atom or string type."
-      def component(type)
-
-      def component(type) when is_atom(type), do: Map.get(__genui_catalog__(), type)
-
-      def component(type) when is_binary(type) do
-        Enum.find_value(__genui_catalog__(), fn {name, component} ->
-          if Atom.to_string(name) == type, do: component
-        end)
-      end
+      unquote_splicing(component_lookup_clauses)
+      def component(type) when is_atom(type) or is_binary(type), do: nil
 
       @doc "Checks if a component type exists in the catalog."
       def has_component?(type), do: not is_nil(component(type))

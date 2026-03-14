@@ -9,6 +9,11 @@ defmodule JsonLiveviewRender.RegistryTest do
     assert is_function(callback, 1)
   end
 
+  test "fetch! supports string component types" do
+    callback = Registry.fetch!(FixtureRegistry, "metric")
+    assert is_function(callback, 1)
+  end
+
   test "has_mapping?/2 supports atom and string types" do
     assert Registry.has_mapping?(FixtureRegistry, :metric)
     assert Registry.has_mapping?(FixtureRegistry, "metric")
