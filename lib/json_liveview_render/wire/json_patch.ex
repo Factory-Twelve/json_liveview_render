@@ -35,10 +35,17 @@ defmodule JsonLiveviewRender.Wire.JsonPatch do
 
   @spec apply(map() | String.t(), [map()] | String.t(), module(), keyword()) :: result()
   def apply(spec, patch, catalog, opts \\ []) when is_list(opts) do
-    with {:ok, canonical_spec} <- Normalize.canonical(spec),
+    with {:ok, canonical_spec} <- canonical_patchable_spec(spec),
          {:ok, operations} <- normalize_patch(patch),
          {:ok, patched_spec} <- apply_operations(canonical_spec, operations) do
       Spec.validate(patched_spec, catalog, opts)
+    end
+  end
+
+  defp canonical_patchable_spec(spec) do
+    with {:ok, canonical_spec} <- Normalize.canonical(spec),
+         {:ok, top_level_presence} <- top_level_presence(spec) do
+      {:ok, strip_absent_top_level_keys(canonical_spec, top_level_presence)}
     end
   end
 
@@ -72,6 +79,28 @@ defmodule JsonLiveviewRender.Wire.JsonPatch do
 
   defp normalize_patch(_patch),
     do: {:error, [invalid_patch("patch must be a list of operations or a JSON array")]}
+
+  defp top_level_presence(spec) when is_map(spec) do
+    {:ok,
+     %{
+       "root" => Map.has_key?(spec, :root) or Map.has_key?(spec, "root"),
+       "elements" => Map.has_key?(spec, :elements) or Map.has_key?(spec, "elements")
+     }}
+  end
+
+  defp top_level_presence(spec) when is_binary(spec) do
+    with {:ok, decoded} <- Jason.decode(spec),
+         true <- is_map(decoded) or {:error, [invalid_patch("spec must decode to a JSON object")]} do
+      top_level_presence(decoded)
+    end
+  end
+
+  defp strip_absent_top_level_keys(spec, presence) do
+    Enum.reduce(presence, spec, fn
+      {_key, true}, acc -> acc
+      {key, false}, acc -> Map.delete(acc, key)
+    end)
+  end
 
   defp normalize_operation(operation, index) when is_map(operation) do
     with {:ok, op} <- normalize_op(operation, index),
@@ -595,9 +624,10 @@ defmodule JsonLiveviewRender.Wire.JsonPatch do
   defp decode_pointer_token(<<>>, acc), do: {:ok, acc}
 
   defp decode_array_index(path, token) do
-    case Integer.parse(token) do
-      {index, ""} when index >= 0 -> {:ok, index}
-      _ -> {:error, [invalid_array_index(path, token)]}
+    if String.match?(token, ~r/^(0|[1-9]\d*)$/) do
+      {:ok, String.to_integer(token)}
+    else
+      {:error, [invalid_array_index(path, token)]}
     end
   end
 

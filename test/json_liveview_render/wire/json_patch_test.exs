@@ -32,6 +32,27 @@ defmodule JsonLiveviewRender.Wire.JsonPatchTest do
     assert patched["elements"]["metric_1"]["props"]["trend"] == "up"
   end
 
+  test "allows top-level add operations when root and elements were absent in the input spec" do
+    patch = [
+      %{
+        "op" => "add",
+        "path" => "/elements",
+        "value" => %{
+          "page" => %{
+            "type" => "row",
+            "props" => %{"gap" => "md"},
+            "children" => []
+          }
+        }
+      },
+      %{"op" => "add", "path" => "/root", "value" => "page"}
+    ]
+
+    assert {:ok, patched} = JsonPatch.apply(%{}, patch, Catalog)
+    assert patched["root"] == "page"
+    assert patched["elements"]["page"]["type"] == "row"
+  end
+
   test "removes a single child ref from the canonical array fixture" do
     assert {:ok, patched} =
              JsonPatch.apply(valid_spec(), fixture_patch("remove_child_ref.json"), Catalog)
@@ -134,6 +155,13 @@ defmodule JsonLiveviewRender.Wire.JsonPatchTest do
     patch = [%{"op" => "add", "path" => "/elements/metric_1/props/value", "value" => "$101"}]
 
     assert {:error, [{:patch_path_exists, _message}]} =
+             JsonPatch.apply(valid_spec(), patch, Catalog)
+  end
+
+  test "rejects signed array indexes instead of coercing them" do
+    patch = [%{"op" => "replace", "path" => "/elements/page/children/-0", "value" => "metric_2"}]
+
+    assert {:error, [{:invalid_patch_index, _message}]} =
              JsonPatch.apply(valid_spec(), patch, Catalog)
   end
 
