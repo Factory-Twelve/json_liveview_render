@@ -165,6 +165,20 @@ defmodule JsonLiveviewRender.Wire.JsonPatchTest do
              JsonPatch.apply(valid_spec(), patch, Catalog)
   end
 
+  test "returns an error when add targets an out-of-range child index" do
+    patch = [%{"op" => "add", "path" => "/elements/page/children/9", "value" => "metric_3"}]
+
+    assert {:error, [{:invalid_patch_index, _message}]} =
+             JsonPatch.apply(valid_spec(), patch, Catalog)
+  end
+
+  test "returns an error when replace targets a missing child index" do
+    patch = [%{"op" => "replace", "path" => "/elements/page/children/9", "value" => "metric_2"}]
+
+    assert {:error, [{:patch_path_not_found, _message}]} =
+             JsonPatch.apply(valid_spec(), patch, Catalog)
+  end
+
   defp fixture_patch(filename) do
     filename
     |> fixture_path()

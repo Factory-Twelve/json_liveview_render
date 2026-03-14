@@ -404,7 +404,7 @@ defmodule JsonLiveviewRender.Wire.JsonPatch do
          value: value
        }) do
     with {:ok, index} <- decode_array_index(path, index_token),
-         true <- index <= length(children) or {:error, [invalid_array_index(path, index_token)]},
+         :ok <- ensure_child_insert_index(path, index_token, index, children),
          {:ok, child_id} <- normalize_child_id(path, value) do
       updated_children = List.insert_at(children, index, child_id)
       updated_element = Map.put(element, "children", updated_children)
@@ -417,7 +417,7 @@ defmodule JsonLiveviewRender.Wire.JsonPatch do
          path: path
        }) do
     with {:ok, index} <- decode_array_index(path, index_token),
-         true <- index < length(children) or {:error, [path_not_found(path)]} do
+         :ok <- ensure_child_member_index(path, index, children) do
       updated_children = List.delete_at(children, index)
       updated_element = Map.put(element, "children", updated_children)
       {:ok, spec |> Map.put("elements", Map.put(elements, id, updated_element))}
@@ -430,7 +430,7 @@ defmodule JsonLiveviewRender.Wire.JsonPatch do
          value: value
        }) do
     with {:ok, index} <- decode_array_index(path, index_token),
-         true <- index < length(children) or {:error, [path_not_found(path)]},
+         :ok <- ensure_child_member_index(path, index, children),
          {:ok, child_id} <- normalize_child_id(path, value) do
       updated_children = List.replace_at(children, index, child_id)
       updated_element = Map.put(element, "children", updated_children)
@@ -628,6 +628,22 @@ defmodule JsonLiveviewRender.Wire.JsonPatch do
       {:ok, String.to_integer(token)}
     else
       {:error, [invalid_array_index(path, token)]}
+    end
+  end
+
+  defp ensure_child_insert_index(path, index_token, index, children) do
+    if index <= length(children) do
+      :ok
+    else
+      {:error, [invalid_array_index(path, index_token)]}
+    end
+  end
+
+  defp ensure_child_member_index(path, index, children) do
+    if index < length(children) do
+      :ok
+    else
+      {:error, [path_not_found(path)]}
     end
   end
 
