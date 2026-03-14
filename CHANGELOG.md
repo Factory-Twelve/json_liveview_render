@@ -7,6 +7,7 @@
 - Keep non-release work here until it is intentionally prepared for the next release.
 - Added internal companion `JsonLiveviewRender.Companion.ChatCards` RC1 surface for cross-platform chat-card payload compilation (LiveView reference, web_chat view-model, Slack Block Kit, Teams Adaptive Cards, WhatsApp interactive); explicitly non-core/experimental.
 - Added internal experimental `JsonLiveviewRender.Blocks.*` sourcing block bundle for wedge side-panel evidence cards, artifact summaries, policy flags, and approval widgets.
+- Added internal experimental `JsonLiveviewRender.Blocks.ArtifactPreviewCatalog`/`JsonLiveviewRender.Blocks.ArtifactPreviewRegistry` RC1 surface for reusable artifact header, lineage, approval, and evidence summary panels.
 - Added `Spec.auto_fix/2` for automatic correction of common AI mistakes in generated specs (string→integer/float/boolean coercion, single-string children wrapping, orphan element detection).
 - Added `Spec.format_errors/1,2` for formatting validation errors into human-readable strings suitable for AI re-prompting; catalog-enriched variant appends available component types for unknown_component errors.
 - Added opt-in `error_boundary` attribute to `JsonLiveviewRender.Renderer` — when enabled, elements that raise during rendering are caught, logged, and silently removed so siblings continue to render.

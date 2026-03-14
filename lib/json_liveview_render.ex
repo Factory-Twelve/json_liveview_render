@@ -23,7 +23,7 @@ defmodule JsonLiveviewRender do
   Experimental:
 
   - `JsonLiveviewRender.DevTools` - in-browser spec inspector for local development
-  - `JsonLiveviewRender.Blocks.*` - internal experimental sourcing block bundle
+  - `JsonLiveviewRender.Blocks.*` - internal experimental companion block bundles
 
   API tags:
 
