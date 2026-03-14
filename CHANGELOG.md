@@ -22,7 +22,7 @@
 - Added explicit v0.3 package-level API scope in `README.md`:
 
   - Stable v0.2 core (contract): Catalog, Spec, Registry, Renderer, Permissions, Bindings, Schema, Debug
-  - v0.3 candidate: Stream, partial validation/rendering (`validate_partial/3`, `allow_partial`)
+  - v0.3 candidate: Stream, partial validation/rendering (`validate_partial/3`, `allow_partial`), wire helpers (`JsonLiveviewRender.Wire.*`)
   - Experimental/deferred: Streaming adapters and DevTools
 
 - Marked streaming adapters and DevTools as experimental/companion-surface and out of the v0.3 core contract.
@@ -57,10 +57,16 @@
 - Expanded stream runtime APIs:
   - `JsonLiveviewRender.Stream.ingest_many/3`
   - `JsonLiveviewRender.Stream.finalize/3`
+- Added agent-friendly wire-format surface for canonical specs:
+  - `JsonLiveviewRender.Wire.YAML.parse/1` for YAML ingress into canonical `root + elements`
+  - `JsonLiveviewRender.Wire.MergePatch.apply/2` and `apply_and_validate/4` for coarse canonical updates
+  - `JsonLiveviewRender.Wire.JsonPatch.apply/4` for narrow path-based canonical updates
+  - contract docs in `docs/wire-formats.md`, `docs/patch-semantics.md`, and `docs/examples/canonical-spec.md`
 - Added provider adapter examples (experimental reference only):
   - `JsonLiveviewRender.Stream.Adapter.OpenAI`
   - `JsonLiveviewRender.Stream.Adapter.Anthropic`
 - Added tests for partial rendering, stream finalize behavior, and adapter integration.
+- Added replayable incremental update fixtures for deterministic UI growth under `test/fixtures/wire/incremental`.
 - Stabilized the streaming event contract and adapter normalization for v0.3:
   - `JsonLiveviewRender.Stream` now enforces explicit transitions for `{:root, id}`, `{:element, id, element}`, and `{:finalize}` with duplicate/out-of-order explicit errors
   - `JsonLiveviewRender.Stream.finalize/3` and `JsonLiveviewRender.Stream.to_spec/1` now share partial-state behavior via `require_complete: false` support

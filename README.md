@@ -51,6 +51,7 @@ JsonLiveviewRender tracks behavior by release family with an explicit v0.3 scope
 | Spec auto-fix & error formatting (`Spec.auto_fix`, `Spec.format_errors`) | | ✅ In scope | |
 | Stream API (`JsonLiveviewRender.Stream`) | | ✅ In scope | |
 | Partial validation/rendering (`validate_partial`, `allow_partial`) | | ✅ In scope | |
+| Wire helpers (`JsonLiveviewRender.Wire.*`) | | ✅ In scope | |
 | Streaming adapters (`JsonLiveviewRender.Stream.Adapter.*`) | | | ✅ Deferred to companion package path |
 | DevTools (`JsonLiveviewRender.DevTools`) | | | ✅ Experimental |
 | Sourcing block bundle (`JsonLiveviewRender.Blocks.*`) | | | ✅ Experimental |
@@ -307,6 +308,41 @@ The stream contract is:
 - `{:finalize}`: mark stream completion
   - safe to call multiple times
 - malformed sequencing returns explicit `{:error, reason}` and does not mutate stream state
+
+## Agent-Friendly Wire Formats (v0.3 candidate)
+
+`JsonLiveviewRender.Wire.*` keeps external authoring and update formats narrow on
+the outside and canonical on the inside. YAML ingress, JSON Merge Patch, and
+JSON Patch all normalize back into the same `root + elements` contract before
+validation.
+
+```elixir
+{:ok, spec} = JsonLiveviewRender.Wire.YAML.parse(yaml_source)
+
+{:ok, merged} =
+  JsonLiveviewRender.Wire.MergePatch.apply_and_validate(
+    spec,
+    merge_patch,
+    MyApp.UICatalog,
+    validation: :partial
+  )
+
+{:ok, patched} =
+  JsonLiveviewRender.Wire.JsonPatch.apply(
+    merged,
+    json_patch,
+    MyApp.UICatalog,
+    allow_missing_root: true,
+    allow_unresolved_children: true
+  )
+```
+
+Contract docs:
+
+- `ARCHITECTURE.md`
+- `docs/wire-formats.md`
+- `docs/patch-semantics.md`
+- `docs/examples/canonical-spec.md`
 
 Provider adapter examples convert provider payloads into structured stream events:
 
