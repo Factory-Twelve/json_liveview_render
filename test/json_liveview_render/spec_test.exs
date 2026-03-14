@@ -53,6 +53,42 @@ defmodule JsonLiveviewRender.SpecTest do
            end) =~ "root \"page\" not yet present"
   end
 
+  test "validate/2 coerces atom-keyed root, element ids, and nested element fields" do
+    spec = %{
+      root: :page,
+      elements: %{
+        page: %{
+          type: :row,
+          props: %{gap: "md"},
+          children: [:metric_1]
+        },
+        metric_1: %{
+          type: :metric,
+          props: %{label: "Revenue", value: "$100"},
+          children: []
+        }
+      }
+    }
+
+    assert {:ok, normalized} = Spec.validate(spec, Catalog)
+
+    assert normalized == %{
+             "root" => "page",
+             "elements" => %{
+               "page" => %{
+                 "type" => "row",
+                 "props" => %{"gap" => "md"},
+                 "children" => ["metric_1"]
+               },
+               "metric_1" => %{
+                 "type" => "metric",
+                 "props" => %{"label" => "Revenue", "value" => "$100"},
+                 "children" => []
+               }
+             }
+           }
+  end
+
   test "rejects cycles" do
     spec =
       valid_spec()
