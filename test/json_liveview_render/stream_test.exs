@@ -143,6 +143,114 @@ defmodule JsonLiveviewRender.StreamTest do
     assert Map.has_key?(stream.elements, "metric_1")
   end
 
+  test "ingest_many/4 replays ordered update envelopes into the same canonical spec" do
+    events = Enum.map(replayable_updates(), &{:update, &1})
+
+    assert {:ok, stream_a} = Stream.ingest_many(Stream.new(), events, Catalog)
+    assert {:ok, stream_b} = Stream.ingest_many(Stream.new(), events, Catalog)
+
+    assert Stream.to_spec(stream_a) == Stream.to_spec(stream_b)
+    assert stream_a.complete?
+
+    assert {:ok, validated} = Stream.finalize(stream_a, Catalog)
+    assert validated["elements"]["page"]["children"] == ["metric_1", "metric_2"]
+    assert Map.keys(validated["elements"]) |> Enum.sort() == ["metric_1", "metric_2", "page"]
+  end
+
+  test "update envelopes are idempotent when the same sequence is replayed" do
+    step_1 = hd(replayable_updates())
+    step_2 = Enum.at(replayable_updates(), 1)
+
+    events = [
+      {:update, step_1},
+      {:update, step_2},
+      {:update, step_1},
+      {:update, step_2}
+    ]
+
+    assert {:ok, stream} = Stream.ingest_many(Stream.new(), events, Catalog)
+
+    assert Stream.to_spec(stream) == %{
+             "root" => "page",
+             "elements" => %{
+               "page" => %{"type" => "row", "props" => %{}, "children" => ["metric_1"]},
+               "metric_1" => %{
+                 "type" => "metric",
+                 "props" => %{"label" => "A", "value" => "1"},
+                 "children" => []
+               }
+             }
+           }
+  end
+
+  test "update envelopes reject conflicting duplicate sequences without mutating state" do
+    step_1 = hd(replayable_updates())
+
+    conflicting_step =
+      put_in(step_1, ["elements", "page", "children"], ["metric_1", "metric_2"])
+
+    assert {:error, {:conflicting_update_sequence, 1}, stream} =
+             Stream.ingest_many(
+               Stream.new(),
+               [{:update, step_1}, {:update, conflicting_step}],
+               Catalog
+             )
+
+    assert Stream.to_spec(stream) == %{
+             "root" => "page",
+             "elements" => %{
+               "page" => %{"type" => "row", "props" => %{}, "children" => ["metric_1"]}
+             }
+           }
+  end
+
+  test "update envelopes stay idempotent when the finalized step is replayed" do
+    updates = replayable_updates()
+    finalized_step = List.last(updates)
+
+    assert {:ok, stream} =
+             Stream.ingest_many(
+               Stream.new(),
+               Enum.map(updates ++ [finalized_step], &{:update, &1}),
+               Catalog
+             )
+
+    assert stream.complete?
+
+    assert Stream.to_spec(stream)["elements"]["page"]["children"] == ["metric_1", "metric_2"]
+    assert {:ok, validated} = Stream.finalize(stream, Catalog)
+    assert validated["root"] == "page"
+  end
+
+  test "update envelopes reject unseen out-of-order sequences" do
+    assert {:error, {:out_of_order_update, 3, 2}, stream} =
+             Stream.ingest_many(
+               Stream.new(),
+               [
+                 {:update, out_of_order_update(1)},
+                 {:update, out_of_order_update(3)},
+                 {:update, out_of_order_update(2)}
+               ],
+               Catalog
+             )
+
+    assert Stream.to_spec(stream) == %{
+             "root" => "page",
+             "elements" => %{
+               "metric_2" => %{
+                 "type" => "metric",
+                 "props" => %{"label" => "B", "value" => "2"},
+                 "children" => []
+               },
+               "page" => %{
+                 "type" => "row",
+                 "props" => %{},
+                 "children" => ["metric_1", "metric_2"]
+               }
+             }
+           }
+  end
+
   test "ingest/3 rejects root reassignment and accepts idempotent same root" do
     {:ok, stream} = Stream.ingest(Stream.new(), {:root, "page"}, Catalog)
     assert {:ok, ^stream} = Stream.ingest(stream, {:root, "page"}, Catalog)
@@ -181,6 +289,32 @@ defmodule JsonLiveviewRender.StreamTest do
       )
 
     assert {:ok, %{"root" => "page"}} = Stream.finalize(stream, Catalog)
+  end
+
+  test "finalize/3 still fails completed update streams when unresolved children remain" do
+    assert {:ok, stream} =
+             Stream.ingest_many(
+               Stream.new(),
+               [
+                 {:update,
+                  %{
+                    "sequence" => 1,
+                    "root" => "page",
+                    "elements" => %{
+                      "page" => %{
+                        "type" => "row",
+                        "props" => %{},
+                        "children" => ["metric_1"]
+                      }
+                    }
+                  }},
+                 {:update, %{"sequence" => 2, "finalize" => true}}
+               ],
+               Catalog
+             )
+
+    assert {:error, reasons} = Stream.finalize(stream, Catalog)
+    assert Enum.any?(reasons, fn {tag, _message} -> tag == :unresolved_child end)
   end
 
   test "finalize/3 with require_complete: false validates partial stream" do
@@ -264,5 +398,65 @@ defmodule JsonLiveviewRender.StreamTest do
        }}
 
     assert {:error, {:unknown_prop, _}} = Stream.ingest(stream, event, Catalog)
+  end
+
+  defp replayable_updates do
+    [
+      %{
+        "sequence" => 1,
+        "root" => "page",
+        "elements" => %{
+          "page" => %{"type" => "row", "props" => %{}, "children" => ["metric_1"]}
+        }
+      },
+      %{
+        "sequence" => 2,
+        "elements" => %{
+          "metric_1" => %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}
+        }
+      },
+      %{
+        "sequence" => 3,
+        "elements" => %{
+          "page" => %{
+            "type" => "row",
+            "props" => %{},
+            "children" => ["metric_1", "metric_2"]
+          },
+          "metric_2" => %{"type" => "metric", "props" => %{"label" => "B", "value" => "2"}}
+        },
+        "finalize" => true
+      }
+    ]
+  end
+
+  defp out_of_order_update(sequence) do
+    updates = %{
+      1 => %{
+        "sequence" => 1,
+        "root" => "page",
+        "elements" => %{
+          "page" => %{
+            "type" => "row",
+            "props" => %{},
+            "children" => ["metric_1", "metric_2"]
+          }
+        }
+      },
+      2 => %{
+        "sequence" => 2,
+        "elements" => %{
+          "metric_1" => %{"type" => "metric", "props" => %{"label" => "A", "value" => "1"}}
+        }
+      },
+      3 => %{
+        "sequence" => 3,
+        "elements" => %{
+          "metric_2" => %{"type" => "metric", "props" => %{"label" => "B", "value" => "2"}}
+        }
+      }
+    }
+
+    Map.fetch!(updates, sequence)
   end
 end

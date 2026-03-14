@@ -1,0 +1,106 @@
+[
+  {
+    "sequence": 1,
+    "root": "page",
+    "elements": {
+      "page": {
+        "type": "column",
+        "props": {},
+        "children": ["summary_header"]
+      }
+    }
+  },
+  {
+    "sequence": 2,
+    "elements": {
+      "summary_header": {
+        "type": "metric",
+        "props": {
+          "label": "Revenue",
+          "value": "Pending"
+        },
+        "children": []
+      }
+    }
+  },
+  {
+    "sequence": 3,
+    "elements": {
+      "page": {
+        "type": "column",
+        "props": {},
+        "children": ["summary_header", "summary_grid"]
+      },
+      "summary_grid": {
+        "type": "grid",
+        "props": {},
+        "children": ["metric_revenue", "metric_margin"]
+      }
+    }
+  },
+  {
+    "sequence": 4,
+    "elements": {
+      "metric_revenue": {
+        "type": "metric",
+        "props": {
+          "label": "Revenue",
+          "value": "$142,300",
+          "trend": "up"
+        },
+        "children": []
+      },
+      "metric_margin": {
+        "type": "metric",
+        "props": {
+          "label": "Margin",
+          "value": "35%",
+          "trend": "flat"
+        },
+        "children": []
+      }
+    }
+  },
+  {
+    "sequence": 5,
+    "elements": {
+      "page": {
+        "type": "column",
+        "props": {},
+        "children": ["summary_header", "summary_grid", "team_cards"]
+      },
+      "summary_header": {
+        "type": "metric",
+        "props": {
+          "label": "Revenue",
+          "value": "$142,300"
+        },
+        "children": []
+      },
+      "team_cards": {
+        "type": "card_list",
+        "props": {
+          "title": "Top performers"
+        },
+        "children": ["user_1", "user_2"]
+      },
+      "user_1": {
+        "type": "user_card",
+        "props": {
+          "name": "Alice",
+          "role": "AE"
+        },
+        "children": []
+      },
+      "user_2": {
+        "type": "user_card",
+        "props": {
+          "name": "Bob",
+          "role": "CSM"
+        },
+        "children": []
+      }
+    },
+    "finalize": true
+  }
+]
