@@ -135,6 +135,9 @@ or element-level keys in v1.
   Spec normalization, validation, and error handling.
 - `JsonLiveviewRender.Schema`
   JSON Schema and prompt-builder support.
+- `JsonLiveviewRender.Wire.*`
+  Canonical wire-format helpers such as patch application over the same
+  `root + elements` contract.
 - `JsonLiveviewRender.Registry`
   Mapping from catalog types to render functions.
 - `JsonLiveviewRender.Renderer`
@@ -159,6 +162,8 @@ or element-level keys in v1.
   of schema truth.
 - Stream assembly feeds the same canonical spec contract; it does not define a
   parallel renderer format.
+- Wire helpers normalize or mutate external payloads, then feed the same spec
+  validation contract; they do not create alternate renderer models.
 - Mix tasks should wrap public library APIs instead of reimplementing core
   behavior.
 
@@ -166,6 +171,7 @@ or element-level keys in v1.
 
 - New catalog DSL behavior: `Catalog`
 - Validation behavior or error reporting: `Spec`
+- External wire-format normalization or patch semantics: `Wire`
 - JSON Schema or prompt generation: `Schema`
 - Render-time composition: `Registry`, `Renderer`, `Bindings`, `Permissions`
 - Streaming accumulation/finalization: `Stream`

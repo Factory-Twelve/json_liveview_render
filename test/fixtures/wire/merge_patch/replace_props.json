@@ -1,0 +1,11 @@
+{
+  "elements": {
+    "metric_1": {
+      "props": {
+        "label": "Revenue",
+        "value": "$125",
+        "trend": "up"
+      }
+    }
+  }
+}
