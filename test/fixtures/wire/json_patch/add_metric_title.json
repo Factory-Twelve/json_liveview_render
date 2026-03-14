@@ -1,0 +1,7 @@
+[
+  {
+    "op": "add",
+    "path": "/elements/metric_1/props/title",
+    "value": "Revenue Title"
+  }
+]
