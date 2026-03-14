@@ -404,12 +404,21 @@ Companion chat-card adapters are available for internal experimentation under
 Slack Block Kit, Teams Adaptive Cards, WhatsApp interactive messages). This
 surface is intentionally non-core and should not be treated as a stable v0.x contract.
 
-Internal sourcing side-panel blocks are also available under
+Internal side-panel block bundles are also available under
+`JsonLiveviewRender.Blocks.*`.
+
 `JsonLiveviewRender.Blocks.SourcingCatalog` and
-`JsonLiveviewRender.Blocks.SourcingRegistry` for wedge evidence cards, artifact
-summaries, policy flags, and approval widgets. This surface is experimental,
-non-core, and intentionally excludes spreadsheet/grid rendering. See
-`docs/companion/sourcing_blocks_rc1.md`.
+`JsonLiveviewRender.Blocks.SourcingRegistry` provide wedge evidence cards,
+artifact summaries, policy flags, and approval widgets.
+
+`JsonLiveviewRender.Blocks.ArtifactPreviewCatalog` and
+`JsonLiveviewRender.Blocks.ArtifactPreviewRegistry` provide reusable artifact
+header, lineage, approval, and evidence summary panels for preview/detail
+surfaces.
+
+These surfaces are experimental, non-core, and intentionally exclude
+spreadsheet/grid rendering. See `docs/companion/sourcing_blocks_rc1.md` and
+`docs/companion/artifact_preview_blocks_rc1.md`.
 
 ## DevTools (Experimental)
 

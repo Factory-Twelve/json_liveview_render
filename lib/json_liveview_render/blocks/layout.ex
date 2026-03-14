@@ -1,6 +1,6 @@
 defmodule JsonLiveviewRender.Blocks.Layout do
   @moduledoc """
-  Internal experimental layout renderers used by the sourcing block bundle.
+  Internal experimental layout renderers used by the companion block bundles.
   """
 
   use Phoenix.Component
