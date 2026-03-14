@@ -1,0 +1,14 @@
+root: page
+elements:
+  page:
+    type: column
+    props:
+      gap: md
+    children:
+      - metric_1
+  metric_1:
+    type: metric
+    props:
+      label: Revenue
+      value: "$100"
+    children: []
