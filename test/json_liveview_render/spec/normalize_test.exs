@@ -98,6 +98,10 @@ defmodule JsonLiveviewRender.Spec.NormalizeTest do
     assert {:error, [{:invalid_spec, _message}]} = Normalize.canonical("[]")
   end
 
+  test "canonical/1 rejects quoted top-level JSON strings" do
+    assert {:error, [{:invalid_spec, _message}]} = Normalize.canonical(~S("\"{}\""))
+  end
+
   test "canonical/1 preserves malformed child shapes for downstream validation errors" do
     spec = %{
       root: :page,

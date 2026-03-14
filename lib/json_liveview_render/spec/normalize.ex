@@ -32,13 +32,18 @@ defmodule JsonLiveviewRender.Spec.Normalize do
 
   def canonical(spec) when is_binary(spec) do
     with {:ok, decoded} <- Jason.decode(spec) do
-      canonical(decoded)
+      canonical_decoded(decoded)
     else
       {:error, reason} -> {:error, [{:invalid_json, reason}]}
     end
   end
 
   def canonical(_), do: {:error, [{:invalid_spec, "spec must be a map or JSON string"}]}
+
+  defp canonical_decoded(decoded) when is_map(decoded), do: {:ok, normalize_canonical(decoded)}
+
+  defp canonical_decoded(_decoded),
+    do: {:error, [{:invalid_spec, "spec must be a map or JSON string"}]}
 
   defp normalize_for_validation(%{"root" => _root, "elements" => elements} = spec)
        when is_map(elements),
