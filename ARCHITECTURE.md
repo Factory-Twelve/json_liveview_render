@@ -145,6 +145,8 @@ or element-level keys in v1.
   Incremental assembly/finalization over the same canonical spec.
 - `JsonLiveviewRender.Debug`, `DevTools`
   Debug-oriented helpers.
+- `JsonLiveviewRender.Blocks.*`
+  Experimental reference block bundles; non-core companion surfaces.
 - `lib/mix/tasks/`
   Library-specific tooling and bootstrapping tasks.
 
@@ -167,6 +169,7 @@ or element-level keys in v1.
 - JSON Schema or prompt generation: `Schema`
 - Render-time composition: `Registry`, `Renderer`, `Bindings`, `Permissions`
 - Streaming accumulation/finalization: `Stream`
+- Experimental reference block bundles: `JsonLiveviewRender.Blocks.*`
 - CLI/bootstrap tooling: `lib/mix/tasks/`
 
 ## Invariants
@@ -182,6 +185,7 @@ or element-level keys in v1.
 ## Common Mistakes To Avoid
 
 - Do not add app-specific UI assumptions to the core library.
+- Do not treat `JsonLiveviewRender.Blocks.*` companion surfaces as stable core API.
 - Do not bypass validation and render arbitrary JSON directly.
 - Do not mix provider-specific transport adapters into the core package.
 - Do not introduce expression-runtime complexity without an explicit product

@@ -23,11 +23,12 @@ defmodule JsonLiveviewRender do
   Experimental:
 
   - `JsonLiveviewRender.DevTools` - in-browser spec inspector for local development
+  - `JsonLiveviewRender.Blocks.*` - internal experimental sourcing block bundle
 
   API tags:
 
   - In-scope for v0.3 lock: all stable v0.2 core modules and `JsonLiveviewRender.Stream` APIs
-  - Experimental / deferred: `JsonLiveviewRender.Stream.Adapter.*`, `JsonLiveviewRender.DevTools`, and transport adapters
+  - Experimental / deferred: `JsonLiveviewRender.Stream.Adapter.*`, `JsonLiveviewRender.DevTools`, `JsonLiveviewRender.Blocks.*`, and transport adapters
   - Cross-platform / provider adapter packages are intentionally out of this package scope
   """
 end

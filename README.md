@@ -53,6 +53,7 @@ JsonLiveviewRender tracks behavior by release family with an explicit v0.3 scope
 | Partial validation/rendering (`validate_partial`, `allow_partial`) | | ✅ In scope | |
 | Streaming adapters (`JsonLiveviewRender.Stream.Adapter.*`) | | | ✅ Deferred to companion package path |
 | DevTools (`JsonLiveviewRender.DevTools`) | | | ✅ Experimental |
+| Sourcing block bundle (`JsonLiveviewRender.Blocks.*`) | | | ✅ Experimental |
 | Cross-platform / transport adapters (Slack/Teams/etc.) | | | ✅ Deferred |
 
 Out of scope in v0.x core:
@@ -366,6 +367,13 @@ Companion chat-card adapters are available for internal experimentation under
 `JsonLiveviewRender.Companion.ChatCards` (LiveView reference, web_chat view-model,
 Slack Block Kit, Teams Adaptive Cards, WhatsApp interactive messages). This
 surface is intentionally non-core and should not be treated as a stable v0.x contract.
+
+Internal sourcing side-panel blocks are also available under
+`JsonLiveviewRender.Blocks.SourcingCatalog` and
+`JsonLiveviewRender.Blocks.SourcingRegistry` for wedge evidence cards, artifact
+summaries, policy flags, and approval widgets. This surface is experimental,
+non-core, and intentionally excludes spreadsheet/grid rendering. See
+`docs/companion/sourcing_blocks_rc1.md`.
 
 ## DevTools (Experimental)
 
