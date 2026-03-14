@@ -12,6 +12,13 @@ defmodule JsonLiveviewRender.SpecTest do
     assert {:ok, _spec} = Spec.validate(valid_spec(), Catalog)
   end
 
+  test "rejects missing root" do
+    spec = Map.delete(valid_spec(), "root")
+
+    assert {:error, reasons} = Spec.validate(spec, Catalog)
+    assert Enum.any?(reasons, fn {tag, _} -> tag == :root_missing end)
+  end
+
   test "rejects unknown component types" do
     spec = put_in(valid_spec(), ["elements", "metric_1", "type"], "does_not_exist")
 
