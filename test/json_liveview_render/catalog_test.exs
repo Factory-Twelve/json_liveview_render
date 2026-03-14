@@ -17,6 +17,7 @@ defmodule JsonLiveviewRender.CatalogTest do
 
     assert Catalog.component(:metric).name == :metric
     assert Catalog.component("metric").name == :metric
+    assert is_nil(Catalog.component("does_not_exist"))
     refute Catalog.has_component?(:does_not_exist)
     assert Catalog.exists?(:metric)
     assert :metric in Catalog.types()

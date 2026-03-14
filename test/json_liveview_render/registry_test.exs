@@ -9,6 +9,11 @@ defmodule JsonLiveviewRender.RegistryTest do
     assert is_function(callback, 1)
   end
 
+  test "fetch! supports string component types" do
+    callback = Registry.fetch!(FixtureRegistry, "metric")
+    assert is_function(callback, 1)
+  end
+
   test "has_mapping?/2 supports atom and string types" do
     assert Registry.has_mapping?(FixtureRegistry, :metric)
     assert Registry.has_mapping?(FixtureRegistry, "metric")
@@ -60,5 +65,28 @@ defmodule JsonLiveviewRender.RegistryTest do
       render :data_table, &Function.identity/1
     end
     """)
+  end
+
+  test "duplicate render mappings preserve last mapping semantics" do
+    Code.compile_string("""
+    defmodule JsonLiveviewRenderTest.DuplicateRegistryCallbacks do
+      def first(assigns), do: Map.put(assigns, :marker, :first)
+      def second(assigns), do: Map.put(assigns, :marker, :second)
+    end
+
+    defmodule JsonLiveviewRenderTest.DuplicateRegistry do
+      use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.Catalog
+
+      alias JsonLiveviewRenderTest.DuplicateRegistryCallbacks, as: Callbacks
+
+      render :metric, &Callbacks.first/1
+      render :metric, &Callbacks.second/1
+    end
+    """)
+
+    callback = Registry.fetch!(JsonLiveviewRenderTest.DuplicateRegistry, :metric)
+
+    assert callback.(%{}) == %{marker: :second}
+    assert Registry.has_mapping?(JsonLiveviewRenderTest.DuplicateRegistry, "metric")
   end
 end
