@@ -51,20 +51,31 @@ defmodule JsonLiveviewRender.Spec.Normalize do
 
   defp normalize_for_validation(spec) do
     %{
-      "root" => normalize_legacy_root(fetch_root(spec)),
-      "elements" => normalize_legacy_elements(fetch_elements(spec))
+      "root" => normalize_legacy_root(fetch_legacy_root(spec)),
+      "elements" => normalize_legacy_elements(fetch_legacy_elements(spec))
     }
   end
 
   defp normalize_canonical(spec) do
     %{
-      "root" => normalize_canonical_root(fetch_root(spec)),
-      "elements" => normalize_canonical_elements(fetch_elements(spec))
+      "root" => normalize_canonical_root(fetch_canonical_root(spec)),
+      "elements" => normalize_canonical_elements(fetch_canonical_elements(spec))
     }
   end
 
-  defp fetch_root(spec), do: Map.get(spec, :root) || Map.get(spec, "root")
-  defp fetch_elements(spec), do: Map.get(spec, :elements) || Map.get(spec, "elements")
+  defp fetch_legacy_root(spec), do: Map.get(spec, :root) || Map.get(spec, "root")
+  defp fetch_legacy_elements(spec), do: Map.get(spec, :elements) || Map.get(spec, "elements")
+
+  defp fetch_canonical_root(spec), do: fetch_present_key(spec, :root, "root")
+  defp fetch_canonical_elements(spec), do: fetch_present_key(spec, :elements, "elements")
+
+  defp fetch_present_key(spec, atom_key, string_key) do
+    cond do
+      Map.has_key?(spec, atom_key) -> Map.get(spec, atom_key)
+      Map.has_key?(spec, string_key) -> Map.get(spec, string_key)
+      true -> nil
+    end
+  end
 
   defp normalize_legacy_root(nil), do: nil
   defp normalize_legacy_root(root) when is_atom(root), do: Atom.to_string(root)

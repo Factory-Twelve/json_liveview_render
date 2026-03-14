@@ -102,6 +102,13 @@ defmodule JsonLiveviewRender.Spec.NormalizeTest do
     assert {:error, [{:invalid_spec, _message}]} = Normalize.canonical(~S("\"{}\""))
   end
 
+  test "canonical/1 preserves an explicit false root value" do
+    spec = %{root: false, elements: %{}}
+
+    assert {:ok, normalized} = Normalize.canonical(spec)
+    assert normalized["root"] == "false"
+  end
+
   test "canonical/1 preserves malformed child shapes for downstream validation errors" do
     spec = %{
       root: :page,
