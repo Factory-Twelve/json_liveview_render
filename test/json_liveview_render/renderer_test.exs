@@ -2,6 +2,7 @@ defmodule JsonLiveviewRender.RendererTest do
   use ExUnit.Case, async: true
 
   alias JsonLiveviewRender.Bindings.Error
+  alias JsonLiveviewRender.Stream
   alias JsonLiveviewRenderTest.Fixtures.Authorizer
   alias JsonLiveviewRenderTest.Fixtures.Catalog
   alias JsonLiveviewRenderTest.Fixtures.Registry
@@ -210,6 +211,23 @@ defmodule JsonLiveviewRender.RendererTest do
 
     assert html =~ "Revenue"
     assert html =~ "$100"
+  end
+
+  test "allow_partial still renders accumulated canonical state while later ids are unresolved" do
+    html =
+      JsonLiveviewRender.Test.render_spec(accumulated_partial_spec(), Catalog,
+        registry: Registry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{},
+        allow_partial: true
+      )
+
+    assert html =~ "Revenue"
+    assert html =~ "Pending"
+    assert html =~ ~s(class="grid")
+    refute html =~ "Margin"
+    refute html =~ "$142,300"
   end
 
   test "renders dev tools inspector when enabled" do
@@ -562,5 +580,51 @@ defmodule JsonLiveviewRender.RendererTest do
     assert Map.has_key?(assigns, :children)
     assert is_list(assigns.children)
     assert length(assigns.children) == 1
+  end
+
+  defp accumulated_partial_spec do
+    updates = [
+      %{
+        "sequence" => 1,
+        "root" => "page",
+        "elements" => %{
+          "page" => %{
+            "type" => "column",
+            "props" => %{},
+            "children" => ["summary_header"]
+          }
+        }
+      },
+      %{
+        "sequence" => 2,
+        "elements" => %{
+          "summary_header" => %{
+            "type" => "metric",
+            "props" => %{"label" => "Revenue", "value" => "Pending"},
+            "children" => []
+          }
+        }
+      },
+      %{
+        "sequence" => 3,
+        "elements" => %{
+          "page" => %{
+            "type" => "column",
+            "props" => %{},
+            "children" => ["summary_header", "summary_grid"]
+          },
+          "summary_grid" => %{
+            "type" => "grid",
+            "props" => %{},
+            "children" => ["metric_revenue", "metric_margin"]
+          }
+        }
+      }
+    ]
+
+    assert {:ok, stream} =
+             Stream.ingest_many(Stream.new(), Enum.map(updates, &{:update, &1}), Catalog)
+
+    Stream.to_spec(stream)
   end
 end
