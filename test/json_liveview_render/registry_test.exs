@@ -66,4 +66,27 @@ defmodule JsonLiveviewRender.RegistryTest do
     end
     """)
   end
+
+  test "duplicate render mappings preserve last mapping semantics" do
+    Code.compile_string("""
+    defmodule JsonLiveviewRenderTest.DuplicateRegistryCallbacks do
+      def first(assigns), do: Map.put(assigns, :marker, :first)
+      def second(assigns), do: Map.put(assigns, :marker, :second)
+    end
+
+    defmodule JsonLiveviewRenderTest.DuplicateRegistry do
+      use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.Catalog
+
+      alias JsonLiveviewRenderTest.DuplicateRegistryCallbacks, as: Callbacks
+
+      render :metric, &Callbacks.first/1
+      render :metric, &Callbacks.second/1
+    end
+    """)
+
+    callback = Registry.fetch!(JsonLiveviewRenderTest.DuplicateRegistry, :metric)
+
+    assert callback.(%{}) == %{marker: :second}
+    assert Registry.has_mapping?(JsonLiveviewRenderTest.DuplicateRegistry, "metric")
+  end
 end

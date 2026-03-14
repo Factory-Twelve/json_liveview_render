@@ -51,8 +51,10 @@ defmodule JsonLiveviewRender.Registry do
         end
       end
 
+    latest_entries = dedupe_latest_entries(entries)
+
     fetch_clauses =
-      for {type, fun_ast} <- entries do
+      for {type, fun_ast} <- latest_entries do
         string_type = Atom.to_string(type)
 
         quote do
@@ -138,5 +140,12 @@ defmodule JsonLiveviewRender.Registry do
     else
       _ -> :ok
     end
+  end
+
+  defp dedupe_latest_entries(entries) do
+    entries
+    |> Enum.reverse()
+    |> Enum.uniq_by(&elem(&1, 0))
+    |> Enum.reverse()
   end
 end
