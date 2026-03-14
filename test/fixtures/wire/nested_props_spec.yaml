@@ -1,0 +1,33 @@
+:root: :page
+:elements:
+  :page:
+    :type: :column
+    :props:
+      :gap: md
+    :children:
+      - :metric_1
+      - :metric_2
+  :metric_1:
+    :type: :styled_metric
+    :props:
+      :label: Revenue
+      :value: "$100"
+      :style:
+        :layout:
+          :padding:
+            :top: 24
+            :bottom: 12
+          :badge:
+            tone: positive
+    :children: []
+  :metric_2:
+    :type: :styled_metric
+    :props:
+      :label: Churn
+      :value: "2%"
+      :style:
+        :layout:
+          :padding:
+            :top: 16
+            :bottom: 8
+    :children: []

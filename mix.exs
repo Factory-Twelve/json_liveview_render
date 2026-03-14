@@ -33,6 +33,7 @@ defmodule JsonLiveviewRender.MixProject do
   defp deps do
     [
       {:jason, "~> 1.4"},
+      {:yaml_elixir, "~> 2.12"},
       {:nimble_options, "~> 1.1"},
       {:phoenix_live_view, "~> 1.1"},
       {:ex_doc, "~> 0.37", only: :dev, runtime: false},
