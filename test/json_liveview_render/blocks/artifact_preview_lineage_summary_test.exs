@@ -49,4 +49,20 @@ defmodule JsonLiveviewRender.Blocks.ArtifactPreviewLineageSummaryTest do
     assert html =~ "Spec digest v4"
     assert html =~ "ready"
   end
+
+  test "ignores malformed nested values instead of crashing" do
+    html =
+      render_component(&ArtifactPreviewLineageSummary.render/1,
+        artifact_id: "artifact_spec_digest_v3",
+        lineage_state: "current",
+        relationships: [
+          %{
+            "label" => %{"unexpected" => "shape"},
+            "refs" => [%{"artifact_id" => "artifact_spec_digest_v2"}]
+          }
+        ]
+      )
+
+    assert html =~ "No lineage references."
+  end
 end

@@ -14,7 +14,9 @@ defmodule JsonLiveviewRender.Blocks.PreviewHelpers do
   def string(map, key, default \\ nil) do
     case value(map, key, default) do
       nil -> default
-      value -> to_string(value)
+      value when is_binary(value) -> value
+      value when is_atom(value) or is_boolean(value) or is_number(value) -> to_string(value)
+      _other -> default
     end
   end
 
