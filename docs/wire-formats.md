@@ -111,11 +111,11 @@ Use it when the caller needs to:
 - change one prop without replacing sibling props
 - add or remove a single child reference
 - add or delete a single element by id
-- assert current state with `test` before mutating
 
 JSON Patch operates against JSON Pointer paths into the canonical document. Path
 targets, supported operations, and failure behavior are defined in
 `docs/patch-semantics.md`.
+The v1 runtime surface supports `add`, `remove`, and `replace`.
 
 ## Choosing Between Merge Patch And JSON Patch
 

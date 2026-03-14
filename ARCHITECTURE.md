@@ -136,8 +136,8 @@ or element-level keys in v1.
 - `JsonLiveviewRender.Schema`
   JSON Schema and prompt-builder support.
 - `JsonLiveviewRender.Wire.*`
-  Canonical wire-format helpers such as patch application over the same
-  `root + elements` contract.
+  v0.3 candidate canonical wire-format helpers such as YAML ingress and patch
+  application over the same `root + elements` contract.
 - `JsonLiveviewRender.Registry`
   Mapping from catalog types to render functions.
 - `JsonLiveviewRender.Renderer`

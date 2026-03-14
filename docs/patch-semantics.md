@@ -5,8 +5,9 @@
 This document defines how patch formats are expected to mutate the canonical
 `root + elements` document described in `ARCHITECTURE.md`.
 
-It defines the contract future patch code must implement. This ticket does not
-add runtime patch application.
+It defines the contract implemented by `JsonLiveviewRender.Wire.MergePatch` and
+`JsonLiveviewRender.Wire.JsonPatch`, plus the constraints future patch work
+must preserve.
 
 ## Application Modes
 
@@ -112,20 +113,21 @@ JSON Patch is the fine-grained mutation format for canonical documents.
 
 ### Supported Operations
 
-The v1 contract reserves these operations:
+The v1 runtime surface supports:
 
 - `add`
 - `remove`
 - `replace`
-- `test`
 
 These operations are non-goals in v1:
 
+- `test`
 - `move`
 - `copy`
 
-`move` and `copy` are intentionally excluded because they blur id stability and
-make patch intent harder to reason about in agent-generated updates.
+`test`, `move`, and `copy` are intentionally excluded because they expand patch
+intent without improving the narrow mutation surface this v1 release is trying
+to preserve.
 
 ### Supported Paths
 
@@ -158,7 +160,7 @@ unescaping.
   element.
 - `add` to `/elements/<id>/children/-` appends one child id.
 - `add` to `/elements/<id>/children/<index>` inserts before the given index.
-- `remove`, `replace`, and `test` require the target path to exist.
+- `remove` and `replace` require the target path to exist.
 - JSON Patch does not create missing intermediate containers. A missing element,
   missing `props`, or missing `children` array is a patch error for nested
   paths.
@@ -177,8 +179,7 @@ unescaping.
 
 Patch application must fail explicitly when:
 
-- the patch path points at a nonexistent element for `remove`, `replace`, or
-  `test`
+- the patch path points at a nonexistent element for `remove` or `replace`
 - a nested path is used without its parent object/array existing
 - a value would make `elements`, `props`, or `children` the wrong container type
 - a JSON Patch operation outside the supported set is used
