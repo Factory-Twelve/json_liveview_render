@@ -94,6 +94,10 @@ defmodule JsonLiveviewRender.Spec.NormalizeTest do
     assert normalized == spec
   end
 
+  test "canonical/1 rejects valid non-object JSON input" do
+    assert {:error, [{:invalid_spec, _message}]} = Normalize.canonical("[]")
+  end
+
   test "canonical/1 preserves malformed child shapes for downstream validation errors" do
     spec = %{
       root: :page,

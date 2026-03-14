@@ -32,7 +32,7 @@ defmodule JsonLiveviewRender.Spec.Normalize do
 
   def canonical(spec) when is_binary(spec) do
     with {:ok, decoded} <- Jason.decode(spec) do
-      {:ok, normalize_canonical(decoded)}
+      canonical(decoded)
     else
       {:error, reason} -> {:error, [{:invalid_json, reason}]}
     end
