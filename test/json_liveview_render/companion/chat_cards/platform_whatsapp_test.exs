@@ -33,6 +33,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.PlatformWhatsAppTest do
     spec =
       FixtureHelper.input_spec()
       |> put_in(["elements", "alert_card", "children"], ["severity", "detail", "impact"])
+      |> update_in(["elements"], &Map.drop(&1, ["actions", "hold", "reinspect", "history"]))
 
     assert {:ok, result} =
              ChatCards.compile(spec,

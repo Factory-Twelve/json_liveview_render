@@ -71,7 +71,10 @@ defmodule JsonLiveviewRender.Catalog.ComponentDef do
     description: nil,
     props: %{},
     slots: [],
-    permission: nil
+    permission: nil,
+    defaults: %{},
+    prop_key_set: MapSet.new(),
+    assign_key_map: %{}
   ]
 
   @type t :: %__MODULE__{
@@ -79,7 +82,10 @@ defmodule JsonLiveviewRender.Catalog.ComponentDef do
           description: String.t() | nil,
           props: %{optional(atom()) => PropDef.t()},
           slots: [atom()],
-          permission: term() | nil
+          permission: term() | nil,
+          defaults: %{optional(String.t()) => term()},
+          prop_key_set: MapSet.t(String.t()),
+          assign_key_map: %{optional(String.t()) => atom()}
         }
 
   @doc "Creates a new component definition with the given name."
@@ -113,4 +119,41 @@ defmodule JsonLiveviewRender.Catalog.ComponentDef do
   @doc "Returns sorted prop names for the component."
   @spec prop_names(t()) :: [atom()]
   def prop_names(component), do: component.props |> Map.keys() |> Enum.sort()
+
+  @doc "Finalizes derived prop metadata used by validation and rendering hot paths."
+  @spec finalize(t()) :: t()
+  def finalize(%__MODULE__{} = component) do
+    {defaults, prop_key_set, assign_key_map} =
+      Enum.reduce(component.props, {%{}, MapSet.new(), %{}}, fn {prop_name, prop_def},
+                                                                {defaults, prop_key_set,
+                                                                 assign_key_map} ->
+        key = Atom.to_string(prop_name)
+
+        defaults =
+          if is_nil(prop_def.default) do
+            defaults
+          else
+            Map.put(defaults, key, prop_def.default)
+          end
+
+        assign_key_map =
+          if String.ends_with?(key, "_binding") do
+            assign_key_map
+            |> Map.put(key, prop_name)
+            |> Map.put(
+              String.replace_suffix(key, "_binding", ""),
+              String.to_atom(String.replace_suffix(key, "_binding", ""))
+            )
+          else
+            Map.put(assign_key_map, key, prop_name)
+          end
+
+        {defaults, MapSet.put(prop_key_set, key), assign_key_map}
+      end)
+
+    component
+    |> Map.put(:defaults, defaults)
+    |> Map.put(:prop_key_set, prop_key_set)
+    |> Map.put(:assign_key_map, assign_key_map)
+  end
 end

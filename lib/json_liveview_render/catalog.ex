@@ -192,6 +192,7 @@ defmodule JsonLiveviewRender.Catalog do
       else
         declared_components
       end
+      |> Map.new(fn {name, component} -> {name, ComponentDef.finalize(component)} end)
 
     component_lookup_clauses =
       for {name, component} <- components do

@@ -126,7 +126,7 @@ defmodule JsonLiveviewRender.Spec.NormalizeTest do
     assert Enum.any?(reasons, fn {tag, _message} -> tag == :invalid_children_type end)
   end
 
-  test "for_validation/1 preserves the existing pre-normalized string-key fast path" do
+  test "for_validation/1 canonicalizes mixed nested keys even when top-level keys are already strings" do
     spec = %{
       "root" => :metric_1,
       "elements" => %{
@@ -139,6 +139,16 @@ defmodule JsonLiveviewRender.Spec.NormalizeTest do
     }
 
     assert {:ok, normalized} = Normalize.for_validation(spec)
-    assert normalized == spec
+
+    assert normalized == %{
+             "root" => "metric_1",
+             "elements" => %{
+               "metric_1" => %{
+                 "type" => "metric",
+                 "props" => %{"{:bad, :key}" => true},
+                 "children" => []
+               }
+             }
+           }
   end
 end

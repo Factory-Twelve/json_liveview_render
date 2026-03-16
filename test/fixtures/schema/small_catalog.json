@@ -19,7 +19,8 @@
             "type": "object",
             "required": [
               "type",
-              "props"
+              "props",
+              "children"
             ],
             "additionalProperties": false,
             "properties": {
@@ -54,7 +55,8 @@
             "type": "object",
             "required": [
               "type",
-              "props"
+              "props",
+              "children"
             ],
             "additionalProperties": false,
             "properties": {
@@ -93,7 +95,8 @@
             "type": "object",
             "required": [
               "type",
-              "props"
+              "props",
+              "children"
             ],
             "additionalProperties": false,
             "properties": {
@@ -138,7 +141,8 @@
             "type": "object",
             "required": [
               "type",
-              "props"
+              "props",
+              "children"
             ],
             "additionalProperties": false,
             "properties": {
@@ -173,7 +177,8 @@
             "type": "object",
             "required": [
               "type",
-              "props"
+              "props",
+              "children"
             ],
             "additionalProperties": false,
             "properties": {

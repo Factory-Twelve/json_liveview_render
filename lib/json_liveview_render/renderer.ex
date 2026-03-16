@@ -163,7 +163,7 @@ defmodule JsonLiveviewRender.Renderer do
     callback = Registry.fetch!(registry, type)
 
     raw_props = Map.get(element, "props", %{})
-    props_with_defaults = apply_defaults(raw_props, component.props)
+    props_with_defaults = apply_defaults(raw_props, component)
 
     resolved_props =
       Bindings.resolve_props(props_with_defaults, bindings,
@@ -186,43 +186,31 @@ defmodule JsonLiveviewRender.Renderer do
         )
       )
 
-    assigns = to_component_assigns(component.props, resolved_props, children)
+    assigns = to_component_assigns(component, resolved_props, children)
 
     callback.(assigns)
   end
 
   defp apply_defaults(props, prop_defs) do
-    Enum.reduce(prop_defs, props, fn {prop_name, prop_def}, acc ->
-      key = Atom.to_string(prop_name)
-
-      if Map.has_key?(acc, key) or is_nil(prop_def.default) do
-        acc
-      else
-        Map.put(acc, key, prop_def.default)
+    defaults =
+      case prop_defs do
+        %{__struct__: JsonLiveviewRender.Catalog.ComponentDef, defaults: defaults} -> defaults
+        _ -> %{}
       end
+
+    Enum.reduce(defaults, props, fn {key, value}, acc ->
+      if Map.has_key?(acc, key), do: acc, else: Map.put(acc, key, value)
     end)
   end
 
-  defp to_component_assigns(prop_defs, resolved_props, children) do
-    allowed_keys =
-      prop_defs
-      |> Map.keys()
-      |> Enum.map(&Atom.to_string/1)
-      |> Enum.flat_map(fn key ->
-        if String.ends_with?(key, "_binding") do
-          [key, String.replace_suffix(key, "_binding", "")]
-        else
-          [key]
-        end
-      end)
-      |> MapSet.new()
+  defp to_component_assigns(component, resolved_props, children) do
+    assign_key_map = component.assign_key_map
 
     prop_assigns =
       Enum.reduce(resolved_props, %{}, fn {key, value}, acc ->
-        if MapSet.member?(allowed_keys, key) do
-          Map.put(acc, String.to_atom(key), value)
-        else
-          acc
+        case Map.fetch(assign_key_map, key) do
+          {:ok, assign_key} -> Map.put(acc, assign_key, value)
+          :error -> acc
         end
       end)
 
