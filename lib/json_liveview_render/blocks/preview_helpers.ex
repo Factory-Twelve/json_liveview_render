@@ -35,4 +35,20 @@ defmodule JsonLiveviewRender.Blocks.PreviewHelpers do
       _other -> default
     end
   end
+
+  @spec number(map(), atom(), number()) :: number()
+  def number(map, key, default \\ 0) do
+    case value(map, key, default) do
+      value when is_integer(value) or is_float(value) -> value
+      _other -> default
+    end
+  end
+
+  @spec boolean(map(), atom(), boolean()) :: boolean()
+  def boolean(map, key, default \\ false) do
+    case value(map, key, default) do
+      value when is_boolean(value) -> value
+      _other -> default
+    end
+  end
 end
