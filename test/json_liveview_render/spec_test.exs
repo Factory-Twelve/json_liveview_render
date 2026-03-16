@@ -7,9 +7,26 @@ defmodule JsonLiveviewRender.SpecTest do
   alias JsonLiveviewRender.Spec
   alias JsonLiveviewRender.Test.Generators
   alias JsonLiveviewRenderTest.Fixtures.Catalog
+  alias JsonLiveviewRenderTest.Fixtures.ManualCatalog
 
   test "valid spec passes" do
     assert {:ok, _spec} = Spec.validate(valid_spec(), Catalog)
+  end
+
+  test "validate/2 accepts manual catalogs built from raw component defs" do
+    spec = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    assert {:ok, validated} = Spec.validate(spec, ManualCatalog)
+    assert validated["elements"]["metric_1"]["props"]["label"] == "Revenue"
   end
 
   test "rejects missing root" do

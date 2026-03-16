@@ -120,40 +120,72 @@ defmodule JsonLiveviewRender.Catalog.ComponentDef do
   @spec prop_names(t()) :: [atom()]
   def prop_names(component), do: component.props |> Map.keys() |> Enum.sort()
 
+  @doc "Returns cached default props or derives them from `props` when absent."
+  @spec defaults(t()) :: %{optional(String.t()) => term()}
+  def defaults(%__MODULE__{defaults: defaults, props: props} = component) do
+    if defaults != %{} or props == %{} do
+      defaults
+    else
+      component |> derive_prop_metadata() |> elem(0)
+    end
+  end
+
+  @doc "Returns cached string prop keys or derives them from `props` when absent."
+  @spec prop_key_set(t()) :: MapSet.t(String.t())
+  def prop_key_set(%__MODULE__{prop_key_set: prop_key_set, props: props} = component) do
+    if MapSet.size(prop_key_set) > 0 or props == %{} do
+      prop_key_set
+    else
+      component |> derive_prop_metadata() |> elem(1)
+    end
+  end
+
+  @doc "Returns cached assign mappings or derives them from `props` when absent."
+  @spec assign_key_map(t()) :: %{optional(String.t()) => atom()}
+  def assign_key_map(%__MODULE__{assign_key_map: assign_key_map, props: props} = component) do
+    if assign_key_map != %{} or props == %{} do
+      assign_key_map
+    else
+      component |> derive_prop_metadata() |> elem(2)
+    end
+  end
+
   @doc "Finalizes derived prop metadata used by validation and rendering hot paths."
   @spec finalize(t()) :: t()
   def finalize(%__MODULE__{} = component) do
-    {defaults, prop_key_set, assign_key_map} =
-      Enum.reduce(component.props, {%{}, MapSet.new(), %{}}, fn {prop_name, prop_def},
-                                                                {defaults, prop_key_set,
-                                                                 assign_key_map} ->
-        key = Atom.to_string(prop_name)
-
-        defaults =
-          if is_nil(prop_def.default) do
-            defaults
-          else
-            Map.put(defaults, key, prop_def.default)
-          end
-
-        assign_key_map =
-          if String.ends_with?(key, "_binding") do
-            assign_key_map
-            |> Map.put(key, prop_name)
-            |> Map.put(
-              String.replace_suffix(key, "_binding", ""),
-              String.to_atom(String.replace_suffix(key, "_binding", ""))
-            )
-          else
-            Map.put(assign_key_map, key, prop_name)
-          end
-
-        {defaults, MapSet.put(prop_key_set, key), assign_key_map}
-      end)
+    {defaults, prop_key_set, assign_key_map} = derive_prop_metadata(component)
 
     component
     |> Map.put(:defaults, defaults)
     |> Map.put(:prop_key_set, prop_key_set)
     |> Map.put(:assign_key_map, assign_key_map)
+  end
+
+  defp derive_prop_metadata(%__MODULE__{props: props}) do
+    Enum.reduce(props, {%{}, MapSet.new(), %{}}, fn {prop_name, prop_def},
+                                                    {defaults, prop_key_set, assign_key_map} ->
+      key = Atom.to_string(prop_name)
+
+      defaults =
+        if is_nil(prop_def.default) do
+          defaults
+        else
+          Map.put(defaults, key, prop_def.default)
+        end
+
+      assign_key_map =
+        if String.ends_with?(key, "_binding") do
+          assign_key_map
+          |> Map.put(key, prop_name)
+          |> Map.put(
+            String.replace_suffix(key, "_binding", ""),
+            String.to_atom(String.replace_suffix(key, "_binding", ""))
+          )
+        else
+          Map.put(assign_key_map, key, prop_name)
+        end
+
+      {defaults, MapSet.put(prop_key_set, key), assign_key_map}
+    end)
   end
 end

@@ -326,7 +326,7 @@ defmodule JsonLiveviewRender.Spec do
   defp validate_element_props(id, %{"type" => type, "props" => props}, catalog, strict?)
        when is_map(props) do
     component = catalog.component(type)
-    known_props = component.prop_key_set
+    known_props = ComponentDef.prop_key_set(component)
 
     unknown_errors =
       props

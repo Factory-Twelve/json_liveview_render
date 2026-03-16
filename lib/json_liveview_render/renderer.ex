@@ -20,6 +20,7 @@ defmodule JsonLiveviewRender.Renderer do
   require Logger
 
   alias JsonLiveviewRender.Bindings
+  alias JsonLiveviewRender.Catalog.ComponentDef
   alias JsonLiveviewRender.Permissions
   alias JsonLiveviewRender.Registry
   alias JsonLiveviewRender.Spec
@@ -194,7 +195,7 @@ defmodule JsonLiveviewRender.Renderer do
   defp apply_defaults(props, prop_defs) do
     defaults =
       case prop_defs do
-        %{__struct__: JsonLiveviewRender.Catalog.ComponentDef, defaults: defaults} -> defaults
+        %ComponentDef{} = component -> ComponentDef.defaults(component)
         _ -> %{}
       end
 
@@ -204,7 +205,7 @@ defmodule JsonLiveviewRender.Renderer do
   end
 
   defp to_component_assigns(component, resolved_props, children) do
-    assign_key_map = component.assign_key_map
+    assign_key_map = ComponentDef.assign_key_map(component)
 
     prop_assigns =
       Enum.reduce(resolved_props, %{}, fn {key, value}, acc ->

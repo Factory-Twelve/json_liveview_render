@@ -5,6 +5,8 @@ defmodule JsonLiveviewRender.RendererTest do
   alias JsonLiveviewRender.Stream
   alias JsonLiveviewRenderTest.Fixtures.Authorizer
   alias JsonLiveviewRenderTest.Fixtures.Catalog
+  alias JsonLiveviewRenderTest.Fixtures.ManualCatalog
+  alias JsonLiveviewRenderTest.Fixtures.ManualRegistry
   alias JsonLiveviewRenderTest.Fixtures.Registry
 
   @dev_tools_spec %{
@@ -52,6 +54,31 @@ defmodule JsonLiveviewRender.RendererTest do
     assert html =~ "$142,300"
     assert html =~ "rows"
     assert html =~ ">2<"
+  end
+
+  test "renders manual catalogs built from raw component defs" do
+    spec = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec, ManualCatalog,
+        registry: ManualRegistry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{}
+      )
+
+    assert html =~ "Revenue"
+    assert html =~ "$100"
+    assert html =~ "flat"
   end
 
   test "filters unauthorized elements" do
