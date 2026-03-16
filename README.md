@@ -416,9 +416,15 @@ artifact summaries, policy flags, and approval widgets.
 header, lineage, approval, and evidence summary panels for preview/detail
 surfaces.
 
+`JsonLiveviewRender.Blocks.DepthSummaryCatalog` and
+`JsonLiveviewRender.Blocks.DepthSummaryRegistry` provide reusable risk signal,
+feasibility, mitigation, and logistics summary panels for depth review
+surfaces.
+
 These surfaces are experimental, non-core, and intentionally exclude
 spreadsheet/grid rendering. See `docs/companion/sourcing_blocks_rc1.md` and
-`docs/companion/artifact_preview_blocks_rc1.md`.
+`docs/companion/artifact_preview_blocks_rc1.md` and
+`docs/companion/depth_summary_blocks_rc1.md`.
 
 ## DevTools (Experimental)
 
