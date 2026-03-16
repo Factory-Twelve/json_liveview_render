@@ -153,16 +153,19 @@ defmodule JsonLiveviewRender.Blocks.FeasibilityScorecard do
     plan_id = PreviewHelpers.string(plan, :plan_id)
     supplier_id = PreviewHelpers.string(plan, :supplier_id)
     facility_id = PreviewHelpers.string(plan, :facility_id)
+    available_capacity_units = integer_value(plan, :available_capacity_units)
+    estimated_unit_cost = number_value(plan, :estimated_unit_cost)
 
-    if filled?(plan_id) and filled?(supplier_id) and filled?(facility_id) do
+    if filled?(plan_id) and filled?(supplier_id) and filled?(facility_id) and
+         is_integer(available_capacity_units) and is_number(estimated_unit_cost) do
       %{
         plan_id: plan_id,
         supplier_id: supplier_id,
         facility_id: facility_id,
         earliest_start_at: PreviewHelpers.string(plan, :earliest_start_at),
         earliest_completion_at: PreviewHelpers.string(plan, :earliest_completion_at),
-        available_capacity_units: PreviewHelpers.integer(plan, :available_capacity_units),
-        estimated_unit_cost: PreviewHelpers.number(plan, :estimated_unit_cost)
+        available_capacity_units: available_capacity_units,
+        estimated_unit_cost: estimated_unit_cost
       }
     end
   end
@@ -229,6 +232,20 @@ defmodule JsonLiveviewRender.Blocks.FeasibilityScorecard do
     |> :erlang.float_to_binary(decimals: 2)
     |> String.trim_trailing("0")
     |> String.trim_trailing(".")
+  end
+
+  defp integer_value(map, key) do
+    case PreviewHelpers.value(map, key) do
+      value when is_integer(value) -> value
+      _other -> nil
+    end
+  end
+
+  defp number_value(map, key) do
+    case PreviewHelpers.value(map, key) do
+      value when is_integer(value) or is_float(value) -> value
+      _other -> nil
+    end
   end
 
   defp filled?(value) when is_binary(value), do: value != ""

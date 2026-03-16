@@ -59,4 +59,33 @@ defmodule JsonLiveviewRender.Blocks.FeasibilityScorecardTest do
     assert html =~ "supplier_lotus_apparel, facility_lotus_danang"
     assert html =~ "recycled_shell_buffer_tight"
   end
+
+  test "drops candidate plans with invalid numeric metrics" do
+    html =
+      render_component(&FeasibilityScorecard.render/1,
+        feasibility_id: "production_feasibility_alpine_hoodie_may",
+        status: "feasible_with_risks",
+        confidence: 0.78,
+        summary: "Summary",
+        candidate_plans: [
+          %{
+            "plan_id" => "valid_plan",
+            "supplier_id" => "supplier_peak_textiles",
+            "facility_id" => "facility_peak_hanoi",
+            "available_capacity_units" => 22_000,
+            "estimated_unit_cost" => 18.4
+          },
+          %{
+            "plan_id" => "invalid_plan",
+            "supplier_id" => "supplier_lotus_apparel",
+            "facility_id" => "facility_lotus_danang",
+            "available_capacity_units" => "unknown",
+            "estimated_unit_cost" => 19.7
+          }
+        ]
+      )
+
+    assert html =~ "valid_plan"
+    refute html =~ "invalid_plan"
+  end
 end

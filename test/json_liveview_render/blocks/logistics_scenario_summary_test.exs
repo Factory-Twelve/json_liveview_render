@@ -71,4 +71,40 @@ defmodule JsonLiveviewRender.Blocks.LogisticsScenarioSummaryTest do
     assert html =~ "Partial air bridge"
     assert html =~ "Improves delivery confidence but increases landed cost."
   end
+
+  test "drops malformed route legs and cost rows" do
+    html =
+      render_component(&LogisticsScenarioSummary.render/1,
+        scenario_id: "logistics_scenario_alpine_ocean_split",
+        scenario_key: "alpine_ocean_split_vietnam_us",
+        scenario_status: "at_risk",
+        summary: "Summary",
+        total_transit_days: 22.5,
+        route_legs: [
+          %{
+            "sequence" => 1,
+            "mode" => "truck",
+            "origin" => "Peak Hanoi Factory",
+            "destination" => "Hai Phong Port",
+            "transit_days" => 1.5
+          },
+          %{
+            "sequence" => 2,
+            "mode" => "ocean",
+            "origin" => "Hai Phong Port",
+            "destination" => "Port of Oakland",
+            "transit_days" => "unknown"
+          }
+        ],
+        cost_breakdown: [
+          %{"cost_type" => "freight", "amount" => 42_800, "currency" => "USD"},
+          %{"cost_type" => "duty", "amount" => "unknown", "currency" => "USD"}
+        ]
+      )
+
+    assert html =~ "Peak Hanoi Factory to Hai Phong Port"
+    refute html =~ "Hai Phong Port to Port of Oakland"
+    assert html =~ "42800 USD"
+    refute html =~ "duty"
+  end
 end

@@ -168,14 +168,16 @@ defmodule JsonLiveviewRender.Blocks.LogisticsScenarioSummary do
     mode = PreviewHelpers.string(leg, :mode)
     origin = PreviewHelpers.string(leg, :origin)
     destination = PreviewHelpers.string(leg, :destination)
+    transit_days = number_value(leg, :transit_days)
 
-    if sequence > 0 and filled?(mode) and filled?(origin) and filled?(destination) do
+    if sequence > 0 and filled?(mode) and filled?(origin) and filled?(destination) and
+         is_number(transit_days) do
       %{
         sequence: sequence,
         mode: mode,
         origin: origin,
         destination: destination,
-        transit_days: PreviewHelpers.number(leg, :transit_days)
+        transit_days: transit_days
       }
     end
   end
@@ -191,9 +193,10 @@ defmodule JsonLiveviewRender.Blocks.LogisticsScenarioSummary do
   defp normalize_cost(cost) when is_map(cost) do
     cost_type = PreviewHelpers.string(cost, :cost_type)
     currency = PreviewHelpers.string(cost, :currency)
+    amount = number_value(cost, :amount)
 
-    if filled?(cost_type) and filled?(currency) do
-      %{cost_type: cost_type, amount: PreviewHelpers.number(cost, :amount), currency: currency}
+    if filled?(cost_type) and filled?(currency) and is_number(amount) do
+      %{cost_type: cost_type, amount: amount, currency: currency}
     end
   end
 
@@ -252,6 +255,13 @@ defmodule JsonLiveviewRender.Blocks.LogisticsScenarioSummary do
     |> :erlang.float_to_binary(decimals: 2)
     |> String.trim_trailing("0")
     |> String.trim_trailing(".")
+  end
+
+  defp number_value(map, key) do
+    case PreviewHelpers.value(map, key) do
+      value when is_integer(value) or is_float(value) -> value
+      _other -> nil
+    end
   end
 
   defp filled?(value) when is_binary(value), do: value != ""
