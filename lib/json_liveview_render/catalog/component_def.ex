@@ -122,8 +122,8 @@ defmodule JsonLiveviewRender.Catalog.ComponentDef do
 
   @doc "Returns cached default props or derives them from `props` when absent."
   @spec defaults(t()) :: %{optional(String.t()) => term()}
-  def defaults(%__MODULE__{defaults: defaults, props: props} = component) do
-    if defaults != %{} or props == %{} do
+  def defaults(%__MODULE__{defaults: defaults} = component) do
+    if metadata_cached?(component) do
       defaults
     else
       component |> derive_prop_metadata() |> elem(0)
@@ -187,5 +187,9 @@ defmodule JsonLiveviewRender.Catalog.ComponentDef do
 
       {defaults, MapSet.put(prop_key_set, key), assign_key_map}
     end)
+  end
+
+  defp metadata_cached?(%__MODULE__{props: props, prop_key_set: prop_key_set}) do
+    props == %{} or MapSet.size(prop_key_set) == map_size(props)
   end
 end
