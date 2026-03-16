@@ -110,13 +110,16 @@ defmodule JsonLiveviewRender.Bindings do
   end
 
   defp find_prop_def(prop_defs, key) do
-    Enum.find_value(prop_defs, fn
-      {prop_name, %PropDef{} = prop_def} ->
-        if Atom.to_string(prop_name) == key, do: prop_def
+    case maybe_existing_atom(key) do
+      atom when is_atom(atom) ->
+        case Map.get(prop_defs, atom) do
+          %PropDef{} = prop_def -> prop_def
+          _ -> nil
+        end
 
-      _ ->
+      nil ->
         nil
-    end)
+    end
   end
 
   defp maybe_existing_atom(key) do

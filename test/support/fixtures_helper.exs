@@ -41,6 +41,36 @@ defmodule JsonLiveviewRenderTest.Fixtures.Catalog do
   end
 end
 
+defmodule JsonLiveviewRenderTest.Fixtures.ManualCatalog do
+  alias JsonLiveviewRender.Catalog.ComponentDef
+  alias JsonLiveviewRender.Catalog.PropDef
+
+  def components, do: %{metric: component(:metric)}
+  def types, do: [:metric]
+
+  def component(:metric), do: metric_component()
+  def component("metric"), do: metric_component()
+  def component(_type), do: nil
+
+  def has_component?(type), do: not is_nil(component(type))
+  def exists?(type), do: has_component?(type)
+
+  def props_for(type) do
+    case component(type) do
+      %ComponentDef{props: props} -> {:ok, props}
+      nil -> :error
+    end
+  end
+
+  defp metric_component do
+    ComponentDef.new(:metric)
+    |> ComponentDef.put_description("Manual KPI")
+    |> ComponentDef.put_prop(%PropDef{name: :label, type: :string, required: true})
+    |> ComponentDef.put_prop(%PropDef{name: :value, type: :string, required: true})
+    |> ComponentDef.put_prop(%PropDef{name: :trend, type: :string, default: "flat"})
+  end
+end
+
 defmodule JsonLiveviewRenderTest.SchemaFixtures.SmallCatalog do
   use JsonLiveviewRender.Catalog
 
@@ -225,6 +255,14 @@ defmodule JsonLiveviewRenderTest.Fixtures.Registry do
   render(:card_list, &Components.card_list/1)
   render(:user_card, &Components.user_card/1)
   render(:privileged_card, &Components.privileged_card/1)
+end
+
+defmodule JsonLiveviewRenderTest.Fixtures.ManualRegistry do
+  use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.ManualCatalog
+
+  alias JsonLiveviewRenderTest.Fixtures.Components
+
+  render(:metric, &Components.metric/1)
 end
 
 defmodule JsonLiveviewRenderTest.Fixtures.Authorizer do

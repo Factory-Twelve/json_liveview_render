@@ -98,6 +98,11 @@ defmodule JsonLiveviewRender.Spec do
          {:ok, root, elements} <- validate_structure(spec_map, allow_missing_root?),
          [] <- validate_references(elements, allow_unresolved_children?),
          [] <- detect_cycles(root, elements),
+         [] <-
+           validate_tree_shape(root, elements,
+             allow_missing_root: allow_missing_root?,
+             allow_unresolved_children: allow_unresolved_children?
+           ),
          [] <- validate_elements(elements, catalog, strict?) do
       {:ok, %{"root" => root, "elements" => elements}}
     else
@@ -191,10 +196,10 @@ defmodule JsonLiveviewRender.Spec do
     cycles
   end
 
-  defp dfs(id, elements, visited, path_list, path_set, cycles) do
+  defp dfs(id, elements, visited, path_rev, path_set, cycles) do
     cond do
       MapSet.member?(path_set, id) ->
-        cycle_path = path_list ++ [id]
+        cycle_path = Enum.reverse([id | path_rev])
         {visited, [Errors.cycle_detected(cycle_path) | cycles]}
 
       MapSet.member?(visited, id) ->
@@ -203,12 +208,91 @@ defmodule JsonLiveviewRender.Spec do
       true ->
         children = elements |> Map.get(id, %{}) |> Map.get("children", [])
         new_visited = MapSet.put(visited, id)
-        new_path_list = path_list ++ [id]
+        new_path_rev = [id | path_rev]
         new_path_set = MapSet.put(path_set, id)
 
         Enum.reduce(children, {new_visited, cycles}, fn child, {acc_visited, acc_cycles} ->
-          dfs(child, elements, acc_visited, new_path_list, new_path_set, acc_cycles)
+          dfs(child, elements, acc_visited, new_path_rev, new_path_set, acc_cycles)
         end)
+    end
+  end
+
+  defp validate_tree_shape(nil, _elements, _opts), do: []
+
+  defp validate_tree_shape(root, elements, opts) do
+    allow_missing_root? = Keyword.get(opts, :allow_missing_root, false)
+    allow_unresolved_children? = Keyword.get(opts, :allow_unresolved_children, false)
+
+    duplicate_child_errors = duplicate_child_errors(elements)
+    multiple_parent_errors = multiple_parent_errors(root, elements)
+
+    unreachable_errors =
+      if allow_missing_root? or allow_unresolved_children? do
+        []
+      else
+        unreachable_errors(root, elements)
+      end
+
+    duplicate_child_errors ++ multiple_parent_errors ++ unreachable_errors
+  end
+
+  defp duplicate_child_errors(elements) do
+    Enum.flat_map(elements, fn {id, element} ->
+      children = if is_map(element), do: Map.get(element, "children", []), else: []
+
+      children
+      |> Enum.frequencies()
+      |> Enum.flat_map(fn
+        {child, count} when count > 1 and is_binary(child) -> [Errors.duplicate_child(id, child)]
+        _ -> []
+      end)
+    end)
+  end
+
+  defp multiple_parent_errors(root, elements) do
+    parent_map =
+      Enum.reduce(elements, %{}, fn {id, element}, acc ->
+        children = if is_map(element), do: Map.get(element, "children", []), else: []
+
+        children
+        |> Enum.reduce(acc, fn child, child_acc ->
+          if is_binary(child) and child != root do
+            Map.update(child_acc, child, MapSet.new([id]), &MapSet.put(&1, id))
+          else
+            child_acc
+          end
+        end)
+      end)
+
+    parent_map
+    |> Enum.flat_map(fn {child, parents} ->
+      if MapSet.size(parents) > 1 do
+        [Errors.multiple_parents(child, MapSet.to_list(parents))]
+      else
+        []
+      end
+    end)
+  end
+
+  defp unreachable_errors(root, elements) do
+    reachable = collect_reachable(root, elements, MapSet.new())
+
+    elements
+    |> Map.keys()
+    |> Enum.reject(&MapSet.member?(reachable, &1))
+    |> Enum.sort()
+    |> Enum.map(&Errors.unreachable_element(root, &1))
+  end
+
+  defp collect_reachable(id, elements, visited) do
+    cond do
+      is_nil(id) or MapSet.member?(visited, id) or not Map.has_key?(elements, id) ->
+        visited
+
+      true ->
+        children = elements |> Map.get(id, %{}) |> Map.get("children", [])
+        visited = MapSet.put(visited, id)
+        Enum.reduce(children, visited, &collect_reachable(&1, elements, &2))
     end
   end
 
@@ -242,7 +326,7 @@ defmodule JsonLiveviewRender.Spec do
   defp validate_element_props(id, %{"type" => type, "props" => props}, catalog, strict?)
        when is_map(props) do
     component = catalog.component(type)
-    known_props = component.props |> Map.keys() |> Enum.map(&Atom.to_string/1) |> MapSet.new()
+    known_props = ComponentDef.prop_key_set(component)
 
     unknown_errors =
       props

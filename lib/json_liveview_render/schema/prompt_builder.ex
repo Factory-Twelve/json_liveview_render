@@ -18,7 +18,7 @@ defmodule JsonLiveviewRender.Schema.PromptBuilder do
     Output format:
     - JSON object with "root" and "elements"
     - "elements" is a flat map keyed by element ids
-    - each element contains: "type", "props", optional "children"
+    - each element contains: "type", "props", and "children" (use [] when empty)
 
     Available components:
     #{components_text}

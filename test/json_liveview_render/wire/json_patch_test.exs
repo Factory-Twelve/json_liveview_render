@@ -58,6 +58,7 @@ defmodule JsonLiveviewRender.Wire.JsonPatchTest do
              JsonPatch.apply(valid_spec(), fixture_patch("remove_child_ref.json"), Catalog)
 
     assert patched["elements"]["page"]["children"] == ["metric_2"]
+    refute Map.has_key?(patched["elements"], "metric_1")
   end
 
   test "replaces one child entry without replacing the whole array" do
@@ -75,12 +76,17 @@ defmodule JsonLiveviewRender.Wire.JsonPatchTest do
           "props" => %{"label" => "Forecast", "value" => "$110"},
           "children" => []
         }
+      },
+      %{
+        "op" => "remove",
+        "path" => "/elements/metric_2"
       }
     ]
 
     assert {:ok, patched} = JsonPatch.apply(valid_spec(), patch, Catalog)
     assert patched["elements"]["page"]["children"] == ["metric_1", "metric_3"]
     assert patched["elements"]["metric_1"]["props"]["label"] == "Revenue"
+    refute Map.has_key?(patched["elements"], "metric_2")
   end
 
   test "supports escaped element ids in elements paths" do

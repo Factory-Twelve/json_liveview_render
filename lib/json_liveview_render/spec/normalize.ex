@@ -45,14 +45,10 @@ defmodule JsonLiveviewRender.Spec.Normalize do
   defp canonical_decoded(_decoded),
     do: {:error, [{:invalid_spec, "spec must be a map or JSON string"}]}
 
-  defp normalize_for_validation(%{"root" => _root, "elements" => elements} = spec)
-       when is_map(elements),
-       do: spec
-
   defp normalize_for_validation(spec) do
     %{
-      "root" => normalize_legacy_root(fetch_legacy_root(spec)),
-      "elements" => normalize_legacy_elements(fetch_legacy_elements(spec))
+      "root" => normalize_legacy_root(fetch_present_key(spec, :root, "root")),
+      "elements" => normalize_legacy_elements(fetch_present_key(spec, :elements, "elements"))
     }
   end
 
@@ -62,9 +58,6 @@ defmodule JsonLiveviewRender.Spec.Normalize do
       "elements" => normalize_canonical_elements(fetch_canonical_elements(spec))
     }
   end
-
-  defp fetch_legacy_root(spec), do: Map.get(spec, :root) || Map.get(spec, "root")
-  defp fetch_legacy_elements(spec), do: Map.get(spec, :elements) || Map.get(spec, "elements")
 
   defp fetch_canonical_root(spec), do: fetch_present_key(spec, :root, "root")
   defp fetch_canonical_elements(spec), do: fetch_present_key(spec, :elements, "elements")

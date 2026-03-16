@@ -17,7 +17,7 @@ defmodule JsonLiveviewRender.DebugTest do
     assert report.spec["root"] == "page"
   end
 
-  test "inspect_spec/3 flags orphans in a valid graph" do
+  test "inspect_spec/3 returns validation errors for unreachable elements" do
     spec =
       put_in(valid_spec(), ["elements", "orphan"], %{
         "type" => "metric",
@@ -25,10 +25,8 @@ defmodule JsonLiveviewRender.DebugTest do
         "children" => []
       })
 
-    assert {:ok, report} = Debug.inspect_spec(spec, Catalog)
-    assert report.orphan_ids == ["orphan"]
-    assert report.reachable_count == 3
-    assert report.element_count == 4
+    assert {:error, reasons} = Debug.inspect_spec(spec, Catalog)
+    assert Enum.any?(reasons, fn {tag, _} -> tag == :unreachable_element end)
   end
 
   test "inspect_spec/3 returns validation errors for invalid specs" do

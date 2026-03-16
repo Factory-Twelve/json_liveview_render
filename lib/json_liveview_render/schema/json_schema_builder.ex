@@ -34,7 +34,7 @@ defmodule JsonLiveviewRender.Schema.JSONSchemaBuilder do
   defp element_variant_schema(type, %ComponentDef{} = component) do
     %{
       "type" => "object",
-      "required" => ["type", "props"],
+      "required" => ["type", "props", "children"],
       "additionalProperties" => false,
       "properties" => %{
         "type" => %{

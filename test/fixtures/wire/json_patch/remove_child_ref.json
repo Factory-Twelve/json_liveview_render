@@ -2,5 +2,9 @@
   {
     "op": "remove",
     "path": "/elements/page/children/0"
+  },
+  {
+    "op": "remove",
+    "path": "/elements/metric_1"
   }
 ]

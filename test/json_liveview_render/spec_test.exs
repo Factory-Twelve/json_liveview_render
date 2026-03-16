@@ -7,9 +7,26 @@ defmodule JsonLiveviewRender.SpecTest do
   alias JsonLiveviewRender.Spec
   alias JsonLiveviewRender.Test.Generators
   alias JsonLiveviewRenderTest.Fixtures.Catalog
+  alias JsonLiveviewRenderTest.Fixtures.ManualCatalog
 
   test "valid spec passes" do
     assert {:ok, _spec} = Spec.validate(valid_spec(), Catalog)
+  end
+
+  test "validate/2 accepts manual catalogs built from raw component defs" do
+    spec = %{
+      "root" => "metric_1",
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$100"},
+          "children" => []
+        }
+      }
+    }
+
+    assert {:ok, validated} = Spec.validate(spec, ManualCatalog)
+    assert validated["elements"]["metric_1"]["props"]["label"] == "Revenue"
   end
 
   test "rejects missing root" do
@@ -96,6 +113,32 @@ defmodule JsonLiveviewRender.SpecTest do
            }
   end
 
+  test "validate/2 normalizes mixed-key nested elements when top-level keys are already strings" do
+    spec = %{
+      "root" => "page",
+      "elements" => %{
+        "page" => %{
+          type: :row,
+          props: %{gap: "md"},
+          children: [:metric_1]
+        },
+        "metric_1" => %{
+          type: :metric,
+          props: %{label: "Revenue", value: "$100"},
+          children: []
+        }
+      }
+    }
+
+    assert {:ok, normalized} = Spec.validate(spec, Catalog)
+
+    assert normalized["elements"]["page"] == %{
+             "type" => "row",
+             "props" => %{"gap" => "md"},
+             "children" => ["metric_1"]
+           }
+  end
+
   test "rejects cycles" do
     spec =
       valid_spec()
@@ -149,7 +192,52 @@ defmodule JsonLiveviewRender.SpecTest do
     }
 
     assert {:error, reasons} = Spec.validate(spec, Catalog)
-    assert Enum.any?(reasons, fn {tag, _message} -> tag == :invalid_root_type end)
+    assert Enum.any?(reasons, fn {tag, _message} -> tag == :unknown_prop end)
+  end
+
+  test "rejects duplicate child references from the same parent" do
+    spec = put_in(valid_spec(), ["elements", "page", "children"], ["metric_1", "metric_1"])
+
+    assert {:error, reasons} = Spec.validate(spec, Catalog)
+    assert Enum.any?(reasons, fn {tag, _} -> tag == :duplicate_child end)
+  end
+
+  test "rejects non-root elements with multiple parents" do
+    spec =
+      valid_spec()
+      |> put_in(["elements", "page", "children"], ["metric_1", "metric_2"])
+      |> put_in(["elements", "metric_2"], %{
+        "type" => "row",
+        "props" => %{"gap" => "md"},
+        "children" => ["metric_1"]
+      })
+
+    assert {:error, reasons} = Spec.validate(spec, Catalog)
+    assert Enum.any?(reasons, fn {tag, _} -> tag == :multiple_parents end)
+  end
+
+  test "rejects unreachable elements in complete validation" do
+    spec =
+      put_in(valid_spec(), ["elements", "orphan"], %{
+        "type" => "metric",
+        "props" => %{"label" => "Ghost", "value" => "0"},
+        "children" => []
+      })
+
+    assert {:error, reasons} = Spec.validate(spec, Catalog)
+    assert Enum.any?(reasons, fn {tag, _} -> tag == :unreachable_element end)
+  end
+
+  test "validate_partial/3 tolerates temporarily unreachable elements during streaming" do
+    spec =
+      put_in(valid_spec(), ["elements", "orphan"], %{
+        "type" => "metric",
+        "props" => %{"label" => "Ghost", "value" => "0"},
+        "children" => []
+      })
+
+    assert {:ok, validated} = Spec.validate_partial(spec, Catalog)
+    assert Map.has_key?(validated["elements"], "orphan")
   end
 
   property "acyclic linear chain specs validate" do

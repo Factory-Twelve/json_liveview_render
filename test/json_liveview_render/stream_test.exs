@@ -291,8 +291,8 @@ defmodule JsonLiveviewRender.StreamTest do
     assert {:ok, %{"root" => "page"}} = Stream.finalize(stream, Catalog)
   end
 
-  test "finalize/3 still fails completed update streams when unresolved children remain" do
-    assert {:ok, stream} =
+  test "finalize update refuses invalid specs and keeps the stream open for repair" do
+    assert {:error, reasons, stream} =
              Stream.ingest_many(
                Stream.new(),
                [
@@ -313,8 +313,31 @@ defmodule JsonLiveviewRender.StreamTest do
                Catalog
              )
 
-    assert {:error, reasons} = Stream.finalize(stream, Catalog)
     assert Enum.any?(reasons, fn {tag, _message} -> tag == :unresolved_child end)
+    refute stream.complete?
+
+    assert {:ok, repaired_stream} =
+             Stream.ingest_many(
+               stream,
+               [
+                 {:update,
+                  %{
+                    "sequence" => 2,
+                    "elements" => %{
+                      "metric_1" => %{
+                        "type" => "metric",
+                        "props" => %{"label" => "A", "value" => "1"},
+                        "children" => []
+                      }
+                    }
+                  }},
+                 {:update, %{"sequence" => 3, "finalize" => true}}
+               ],
+               Catalog
+             )
+
+    assert repaired_stream.complete?
+    assert {:ok, %{"root" => "page"}} = Stream.finalize(repaired_stream, Catalog)
   end
 
   test "finalize/3 with require_complete: false validates partial stream" do

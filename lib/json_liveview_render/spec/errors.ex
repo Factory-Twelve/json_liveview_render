@@ -42,6 +42,26 @@ defmodule JsonLiveviewRender.Spec.Errors do
   def cycle_detected(path),
     do: {:cycle_detected, "cycle detected in spec graph: #{Enum.join(path, " -> ")}"}
 
+  @doc "Error: an element references the same child id more than once."
+  @spec duplicate_child(String.t(), String.t()) :: {:duplicate_child, String.t()}
+  def duplicate_child(id, child),
+    do:
+      {:duplicate_child,
+       "element #{inspect(id)} references child #{inspect(child)} more than once"}
+
+  @doc "Error: a non-root element is referenced by more than one parent."
+  @spec multiple_parents(String.t(), [String.t()]) :: {:multiple_parents, String.t()}
+  def multiple_parents(child, parents) do
+    {:multiple_parents,
+     "element #{inspect(child)} is referenced by multiple parents #{inspect(Enum.sort(parents))}"}
+  end
+
+  @doc "Error: an element is not reachable from the root."
+  @spec unreachable_element(String.t(), String.t()) :: {:unreachable_element, String.t()}
+  def unreachable_element(root, id) do
+    {:unreachable_element, "element #{inspect(id)} is not reachable from root #{inspect(root)}"}
+  end
+
   @doc "Error: a required prop is missing from an element."
   @spec missing_required_prop(String.t(), String.t()) :: {:missing_required_prop, String.t()}
   def missing_required_prop(id, prop),

@@ -9,7 +9,7 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
           spec: map(),
           complete?: boolean(),
           last_sequence: sequence() | nil,
-          applied_updates: %{optional(sequence()) => map()}
+          applied_updates: %{optional(sequence()) => binary()}
         }
 
   defstruct spec: %{"root" => nil, "elements" => %{}},
@@ -52,7 +52,10 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
     with :ok <- ensure_open(accumulator),
          {:ok, next_spec} <- apply_root(accumulator.spec, normalized_update),
          {:ok, next_spec} <- apply_elements(next_spec, normalized_update, catalog, strict?),
-         {:ok, next_complete?} <- apply_finalize(accumulator, normalized_update, next_spec) do
+         {:ok, next_complete?} <-
+           apply_finalize(accumulator, normalized_update, next_spec, catalog, strict?) do
+      fingerprint = update_fingerprint(normalized_update)
+
       {:ok,
        %{
          accumulator
@@ -60,11 +63,7 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
            complete?: next_complete?,
            last_sequence: normalized_update["sequence"],
            applied_updates:
-             Map.put(
-               accumulator.applied_updates,
-               normalized_update["sequence"],
-               normalized_update
-             )
+             Map.put(accumulator.applied_updates, normalized_update["sequence"], fingerprint)
        }}
     end
   end
@@ -74,11 +73,12 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
          %{"sequence" => sequence} = normalized_update
        ) do
     case Map.fetch(applied_updates, sequence) do
-      {:ok, ^normalized_update} ->
-        :duplicate
-
-      {:ok, _other_update} ->
-        {:error, {:conflicting_update_sequence, sequence}}
+      {:ok, fingerprint} ->
+        if fingerprint == update_fingerprint(normalized_update) do
+          :duplicate
+        else
+          {:error, {:conflicting_update_sequence, sequence}}
+        end
 
       :error ->
         if not is_nil(last_sequence) and sequence <= last_sequence do
@@ -127,16 +127,21 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
 
   defp apply_elements(spec, _normalized_update, _catalog, _strict?), do: {:ok, spec}
 
-  defp apply_finalize(_accumulator, %{"finalize" => true}, spec) do
-    if is_nil(spec["root"]) do
-      {:error, :root_not_set}
-    else
-      {:ok, true}
+  defp apply_finalize(_accumulator, %{"finalize" => true}, spec, catalog, strict?) do
+    case Spec.validate(spec, catalog, strict: strict?) do
+      {:ok, _validated_spec} -> {:ok, true}
+      {:error, reasons} -> {:error, reasons}
     end
   end
 
-  defp apply_finalize(%__MODULE__{complete?: complete?}, _normalized_update, _spec),
-    do: {:ok, complete?}
+  defp apply_finalize(
+         %__MODULE__{complete?: complete?},
+         _normalized_update,
+         _spec,
+         _catalog,
+         _strict?
+       ),
+       do: {:ok, complete?}
 
   defp validate_element_update(id, element, catalog, strict?) when is_map(element) do
     Spec.validate_element(id, element, catalog, strict: strict?)
@@ -238,5 +243,9 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
       Map.has_key?(map, string_key) -> {:present, Map.get(map, string_key)}
       true -> :absent
     end
+  end
+
+  defp update_fingerprint(normalized_update) do
+    :crypto.hash(:sha256, :erlang.term_to_binary(normalized_update))
   end
 end

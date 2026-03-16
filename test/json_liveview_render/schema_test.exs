@@ -51,7 +51,7 @@ defmodule JsonLiveviewRender.SchemaTest do
              "flat"
            ]
 
-    assert metric_variant["required"] == ["type", "props"]
+    assert metric_variant["required"] == ["type", "props", "children"]
     assert metric_variant["additionalProperties"] == false
   end
 
