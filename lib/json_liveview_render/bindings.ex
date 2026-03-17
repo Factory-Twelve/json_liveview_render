@@ -17,7 +17,8 @@ defmodule JsonLiveviewRender.Bindings do
       when is_map(props) and is_map(bindings) and is_list(opts) do
     prop_defs = Keyword.get(opts, :prop_defs, %{})
     check_types? = Keyword.get(opts, :check_types, false)
-    ensure_no_binding_conflicts!(props)
+    literal_props = Keyword.get(opts, :literal_props, props)
+    ensure_no_binding_conflicts!(props, literal_props)
 
     Enum.reduce(props, %{}, fn {key, value}, acc ->
       key = to_string(key)
@@ -38,20 +39,27 @@ defmodule JsonLiveviewRender.Bindings do
     end)
   end
 
-  defp ensure_no_binding_conflicts!(props) do
-    normalized_keys =
+  defp ensure_no_binding_conflicts!(props, literal_props)
+       when is_map(props) and is_map(literal_props) do
+    normalized_literal_keys =
+      literal_props
+      |> Map.keys()
+      |> Enum.map(&to_string/1)
+      |> MapSet.new()
+
+    normalized_prop_keys =
       props
       |> Map.keys()
       |> Enum.map(&to_string/1)
       |> MapSet.new()
 
     conflicts =
-      normalized_keys
+      normalized_prop_keys
       |> Enum.flat_map(fn key ->
         if String.ends_with?(key, "_binding") do
           resolved_key = String.replace_suffix(key, "_binding", "")
 
-          if MapSet.member?(normalized_keys, resolved_key), do: [resolved_key], else: []
+          if MapSet.member?(normalized_literal_keys, resolved_key), do: [resolved_key], else: []
         else
           []
         end

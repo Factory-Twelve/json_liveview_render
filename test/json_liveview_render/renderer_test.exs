@@ -9,6 +9,39 @@ defmodule JsonLiveviewRender.RendererTest do
   alias JsonLiveviewRenderTest.Fixtures.ManualRegistry
   alias JsonLiveviewRenderTest.Fixtures.Registry
 
+  defmodule DefaultBindingCatalog do
+    use JsonLiveviewRender.Catalog
+
+    component :defaulted_table do
+      description("Binding-backed table with a literal default")
+      prop(:rows, {:list, :map}, default: [])
+      prop(:rows_binding, :string, binding_type: {:list, :map})
+      prop(:columns, {:list, :string}, required: true)
+    end
+  end
+
+  defmodule DefaultBindingComponents do
+    use Phoenix.Component
+
+    attr(:rows, :list, required: true)
+    attr(:columns, :list, required: true)
+
+    def defaulted_table(assigns) do
+      ~H"""
+      <div class="defaulted-table">
+        <span class="cols"><%= Enum.join(@columns, ",") %></span>
+        <span class="rows"><%= length(@rows) %></span>
+      </div>
+      """
+    end
+  end
+
+  defmodule DefaultBindingRegistry do
+    use JsonLiveviewRender.Registry, catalog: DefaultBindingCatalog
+
+    render(:defaulted_table, &DefaultBindingComponents.defaulted_table/1)
+  end
+
   @dev_tools_spec %{
     "root" => "metric_1",
     "elements" => %{
@@ -189,6 +222,30 @@ defmodule JsonLiveviewRender.RendererTest do
         check_binding_types: true
       )
     end
+  end
+
+  test "binding-backed props can override synthesized literal defaults" do
+    spec = %{
+      "root" => "table_1",
+      "elements" => %{
+        "table_1" => %{
+          "type" => "defaulted_table",
+          "props" => %{"columns" => ["id"], "rows_binding" => "rows"},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec, DefaultBindingCatalog,
+        registry: DefaultBindingRegistry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{"rows" => [%{"id" => 1}, %{"id" => 2}]}
+      )
+
+    assert html =~ "defaulted-table"
+    assert html =~ ">2<"
   end
 
   test "partial specs fail by default when unresolved refs exist" do
