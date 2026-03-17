@@ -145,8 +145,8 @@ defmodule JsonLiveviewRender.Permissions do
             acc = if denied_here, do: MapSet.put(acc, id), else: acc
 
             Enum.reduce(Map.get(element, "children", []), {acc, visited}, fn child_id,
-                                                                              {inner_acc,
-                                                                               inner_visited} ->
+                                                                             {inner_acc,
+                                                                              inner_visited} ->
               collect_blocked_ids(
                 child_id,
                 elements,
