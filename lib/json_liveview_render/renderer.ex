@@ -168,6 +168,7 @@ defmodule JsonLiveviewRender.Renderer do
 
     resolved_props =
       Bindings.resolve_props(props_with_defaults, bindings,
+        literal_props: raw_props,
         prop_defs: component.props,
         check_types: check_binding_types
       )

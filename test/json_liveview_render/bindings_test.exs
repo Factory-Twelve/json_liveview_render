@@ -25,6 +25,12 @@ defmodule JsonLiveviewRender.BindingsTest do
     end
   end
 
+  test "raises when literal and binding props target the same resolved key" do
+    assert_raise Error, ~r/conflicting literal and binding props/, fn ->
+      Bindings.resolve_props(%{"rows" => [], "rows_binding" => "rows"}, %{"rows" => [1]})
+    end
+  end
+
   test "optional type checks validate resolved binding values" do
     {:ok, prop_defs} = Catalog.props_for(:data_table)
 

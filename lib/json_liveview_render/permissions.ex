@@ -28,31 +28,143 @@ defmodule JsonLiveviewRender.Permissions do
       when is_map(elements) do
     user_role_keys = inherited_role_keys(current_user)
 
-    allowed_ids =
-      elements
-      |> Enum.filter(fn {_id, element} ->
-        allowed_element?(element, catalog, current_user, authorizer, user_role_keys)
-      end)
-      |> Enum.map(fn {id, _} -> id end)
-      |> MapSet.new()
+    if root_denied?(root, elements, catalog, current_user, authorizer, user_role_keys) do
+      spec
+      |> Map.put("root", nil)
+      |> Map.put("elements", %{})
+    else
+      allowed_ids =
+        elements
+        |> Enum.filter(fn {_id, element} ->
+          allowed_element?(element, catalog, current_user, authorizer, user_role_keys)
+        end)
+        |> Enum.map(fn {id, _} -> id end)
+        |> MapSet.new()
 
-    filtered_elements =
-      elements
-      |> Enum.filter(fn {id, _} -> MapSet.member?(allowed_ids, id) end)
-      |> Enum.into(%{}, fn {id, element} ->
-        children =
-          Map.get(element, "children", [])
-          |> Enum.filter(&MapSet.member?(allowed_ids, &1))
+      blocked_ids =
+        blocked_reachable_ids(
+          root,
+          elements,
+          catalog,
+          current_user,
+          authorizer,
+          user_role_keys
+        )
 
-        {id, Map.put(element, "children", children)}
-      end)
+      retained_ids = MapSet.difference(allowed_ids, blocked_ids)
 
-    spec
-    |> Map.put("root", root)
-    |> Map.put("elements", filtered_elements)
+      filtered_elements =
+        elements
+        |> Enum.filter(fn {id, _} -> MapSet.member?(retained_ids, id) end)
+        |> Enum.into(%{}, fn {id, element} ->
+          children =
+            Map.get(element, "children", [])
+            |> Enum.filter(&MapSet.member?(retained_ids, &1))
+
+          {id, Map.put(element, "children", children)}
+        end)
+
+      spec
+      |> Map.put("root", root)
+      |> Map.put("elements", filtered_elements)
+    end
   end
 
   def filter(spec, _current_user, _catalog, _authorizer), do: spec
+
+  defp root_denied?(
+         nil,
+         _elements,
+         _catalog,
+         _current_user,
+         _authorizer,
+         _user_role_keys
+       ),
+       do: false
+
+  defp root_denied?(root, elements, catalog, current_user, authorizer, user_role_keys) do
+    case Map.fetch(elements, root) do
+      {:ok, root_element} ->
+        not allowed_element?(root_element, catalog, current_user, authorizer, user_role_keys)
+
+      :error ->
+        false
+    end
+  end
+
+  defp blocked_reachable_ids(
+         nil,
+         _elements,
+         _catalog,
+         _current_user,
+         _authorizer,
+         _user_role_keys
+       ),
+       do: MapSet.new()
+
+  defp blocked_reachable_ids(root, elements, catalog, current_user, authorizer, user_role_keys) do
+    {blocked_ids, _visited} =
+      collect_blocked_ids(
+        root,
+        elements,
+        catalog,
+        current_user,
+        authorizer,
+        user_role_keys,
+        false,
+        MapSet.new(),
+        MapSet.new()
+      )
+
+    blocked_ids
+  end
+
+  defp collect_blocked_ids(
+         id,
+         elements,
+         catalog,
+         current_user,
+         authorizer,
+         user_role_keys,
+         blocked?,
+         acc,
+         visited
+       ) do
+    cond do
+      MapSet.member?(visited, id) ->
+        {acc, visited}
+
+      true ->
+        case Map.fetch(elements, id) do
+          {:ok, element} ->
+            denied_here =
+              blocked? or
+                not allowed_element?(element, catalog, current_user, authorizer, user_role_keys)
+
+            visited = MapSet.put(visited, id)
+            acc = if denied_here, do: MapSet.put(acc, id), else: acc
+
+            Enum.reduce(Map.get(element, "children", []), {acc, visited}, fn child_id,
+                                                                             {inner_acc,
+                                                                              inner_visited} ->
+              collect_blocked_ids(
+                child_id,
+                elements,
+                catalog,
+                current_user,
+                authorizer,
+                user_role_keys,
+                denied_here,
+                inner_acc,
+                inner_visited
+              )
+            end)
+
+          :error ->
+            {acc, visited}
+        end
+    end
+  end
 
   defp allowed_element?(%{"type" => type}, catalog, current_user, authorizer, user_role_keys) do
     case catalog.component(type) do

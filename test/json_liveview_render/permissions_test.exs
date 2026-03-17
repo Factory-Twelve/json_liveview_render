@@ -103,6 +103,101 @@ defmodule JsonLiveviewRender.PermissionsTest do
     assert get_in(filtered, ["elements", "page", "children"]) == ["metric_1"]
   end
 
+  test "clears the filtered spec when the root element is unauthorized" do
+    spec = %{
+      "root" => "admin_1",
+      "elements" => %{
+        "admin_1" => %{
+          "type" => "admin_panel",
+          "props" => %{"title" => "Top Secret"},
+          "children" => ["metric_1"]
+        },
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "A", "value" => "1"},
+          "children" => []
+        }
+      }
+    }
+
+    filtered = Permissions.filter(spec, %{role: :member}, Catalog, Authorizer)
+
+    assert filtered["root"] == nil
+    assert filtered["elements"] == %{}
+  end
+
+  test "drops allowed descendants when an unauthorized ancestor is removed" do
+    spec = %{
+      "root" => "page",
+      "elements" => %{
+        "page" => %{
+          "type" => "row",
+          "props" => %{},
+          "children" => ["admin_1"]
+        },
+        "admin_1" => %{
+          "type" => "admin_panel",
+          "props" => %{"title" => "Top Secret"},
+          "children" => ["metric_1"]
+        },
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "A", "value" => "1"},
+          "children" => []
+        }
+      }
+    }
+
+    filtered = Permissions.filter(spec, %{role: :member}, Catalog, Authorizer)
+
+    assert Map.has_key?(filtered["elements"], "page")
+    refute Map.has_key?(filtered["elements"], "admin_1")
+    refute Map.has_key?(filtered["elements"], "metric_1")
+    assert get_in(filtered, ["elements", "page", "children"]) == []
+  end
+
+  test "preserves allowed orphan elements during partial streaming" do
+    spec = %{
+      "root" => "page",
+      "elements" => %{
+        "page" => %{
+          "type" => "row",
+          "props" => %{},
+          "children" => []
+        },
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "A", "value" => "1"},
+          "children" => []
+        }
+      }
+    }
+
+    filtered = Permissions.filter(spec, %{role: :member}, Catalog, Authorizer)
+
+    assert filtered["root"] == "page"
+    assert Map.has_key?(filtered["elements"], "page")
+    assert Map.has_key?(filtered["elements"], "metric_1")
+  end
+
+  test "preserves authorized elements while root is still missing during partial streaming" do
+    spec = %{
+      "root" => nil,
+      "elements" => %{
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "A", "value" => "1"},
+          "children" => []
+        }
+      }
+    }
+
+    filtered = Permissions.filter(spec, %{role: :member}, Catalog, Authorizer)
+
+    assert filtered["root"] == nil
+    assert Map.has_key?(filtered["elements"], "metric_1")
+  end
+
   test "supports list shorthand required roles using any_of semantics" do
     spec = %{
       "root" => "parent",
