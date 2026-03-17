@@ -423,6 +423,38 @@ defmodule JsonLiveviewRender.StreamTest do
     assert {:error, {:unknown_prop, _}} = Stream.ingest(stream, event, Catalog)
   end
 
+  test "update replay tracking stays bounded across long streams" do
+    updates =
+      [
+        %{
+          "sequence" => 1,
+          "root" => "page",
+          "elements" => %{
+            "page" => %{"type" => "row", "props" => %{}, "children" => []}
+          }
+        }
+      ] ++
+        Enum.map(2..300, fn sequence ->
+          %{
+            "sequence" => sequence,
+            "elements" => %{
+              "metric_1" => %{
+                "type" => "metric",
+                "props" => %{"label" => "A", "value" => Integer.to_string(sequence)},
+                "children" => []
+              }
+            }
+          }
+        end)
+
+    assert {:ok, stream} =
+             Stream.ingest_many(Stream.new(), Enum.map(updates, &{:update, &1}), Catalog)
+
+    assert map_size(stream.update_accumulator.applied_updates) <= 256
+    assert stream.update_accumulator.last_sequence == 300
+    assert Stream.to_spec(stream)["elements"]["metric_1"]["props"]["value"] == "300"
+  end
+
   defp replayable_updates do
     [
       %{

@@ -4,18 +4,22 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
   alias JsonLiveviewRender.Spec
   alias JsonLiveviewRender.Spec.Normalizer
 
+  @max_tracked_updates 256
+
   @type sequence :: pos_integer()
   @type t :: %__MODULE__{
           spec: map(),
           complete?: boolean(),
           last_sequence: sequence() | nil,
-          applied_updates: %{optional(sequence()) => binary()}
+          applied_updates: %{optional(sequence()) => binary()},
+          applied_sequence_order: :queue.queue(sequence())
         }
 
   defstruct spec: %{"root" => nil, "elements" => %{}},
             complete?: false,
             last_sequence: nil,
-            applied_updates: %{}
+            applied_updates: %{},
+            applied_sequence_order: :queue.new()
 
   @spec from_stream(map()) :: t()
   def from_stream(%{root: root, elements: elements, complete?: complete?}) do
@@ -49,6 +53,8 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
   end
 
   defp do_apply(accumulator, normalized_update, catalog, strict?) do
+    sequence = normalized_update["sequence"]
+
     with :ok <- ensure_open(accumulator),
          {:ok, next_spec} <- apply_root(accumulator.spec, normalized_update),
          {:ok, next_spec} <- apply_elements(next_spec, normalized_update, catalog, strict?),
@@ -56,14 +62,17 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
            apply_finalize(accumulator, normalized_update, next_spec, catalog, strict?) do
       fingerprint = update_fingerprint(normalized_update)
 
+      {applied_updates, applied_sequence_order} =
+        track_applied_update(accumulator, sequence, fingerprint)
+
       {:ok,
        %{
          accumulator
          | spec: next_spec,
            complete?: next_complete?,
-           last_sequence: normalized_update["sequence"],
-           applied_updates:
-             Map.put(accumulator.applied_updates, normalized_update["sequence"], fingerprint)
+           last_sequence: sequence,
+           applied_updates: applied_updates,
+           applied_sequence_order: applied_sequence_order
        }}
     end
   end
@@ -247,5 +256,22 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
 
   defp update_fingerprint(normalized_update) do
     :crypto.hash(:sha256, :erlang.term_to_binary(normalized_update))
+  end
+
+  defp track_applied_update(accumulator, sequence, fingerprint) do
+    applied_updates = Map.put(accumulator.applied_updates, sequence, fingerprint)
+    applied_sequence_order = :queue.in(sequence, accumulator.applied_sequence_order)
+
+    maybe_prune_applied_updates(applied_updates, applied_sequence_order)
+  end
+
+  defp maybe_prune_applied_updates(applied_updates, applied_sequence_order) do
+    if map_size(applied_updates) > @max_tracked_updates do
+      {{:value, oldest_sequence}, next_sequence_order} = :queue.out(applied_sequence_order)
+      next_applied_updates = Map.delete(applied_updates, oldest_sequence)
+      {next_applied_updates, next_sequence_order}
+    else
+      {applied_updates, applied_sequence_order}
+    end
   end
 end

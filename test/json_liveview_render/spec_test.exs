@@ -36,6 +36,13 @@ defmodule JsonLiveviewRender.SpecTest do
     assert Enum.any?(reasons, fn {tag, _} -> tag == :root_missing end)
   end
 
+  test "rejects JSON strings that decode to non-object values" do
+    Enum.each(["[]", "123", "null", "true"], fn payload ->
+      assert {:error, reasons} = Spec.validate(payload, Catalog)
+      assert Enum.any?(reasons, fn {tag, _} -> tag == :invalid_spec end)
+    end)
+  end
+
   test "rejects unknown component types" do
     spec = put_in(valid_spec(), ["elements", "metric_1", "type"], "does_not_exist")
 

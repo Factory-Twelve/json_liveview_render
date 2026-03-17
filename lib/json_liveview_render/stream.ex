@@ -29,7 +29,8 @@ defmodule JsonLiveviewRender.Stream do
     - rejected when element id already exists: `{:error, {:element_already_exists, id}}`
   - `{:update, update}`:
     - accepted when `update.sequence` is a new positive integer greater than the last applied update
-    - accepted again when the same sequence repeats with the same normalized payload (idempotent replay)
+    - accepted again when the same sequence repeats with the same normalized payload
+      while that sequence is still inside the bounded replay window (idempotent replay)
     - rejected when the same sequence repeats with different content:
       `{:error, {:conflicting_update_sequence, sequence}}`
     - rejected when an unseen sequence is replayed out of order:
@@ -41,7 +42,8 @@ defmodule JsonLiveviewRender.Stream do
 
   Invalid event shapes return `{:error, {:invalid_stream_event, event}}`.
   Once complete, all new non-`:finalize` events return `{:error, :stream_already_finalized}`.
-  Exact duplicate `{:update, update}` replays remain idempotent after completion.
+  Exact duplicate `{:update, update}` replays remain idempotent after completion
+  while the sequence remains inside the replay window.
   """
 
   alias JsonLiveviewRender.Spec
