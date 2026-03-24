@@ -27,28 +27,18 @@ defmodule JsonLiveviewRender.Permissions do
   def filter(%{"root" => root, "elements" => elements} = spec, current_user, catalog, authorizer)
       when is_map(elements) do
     user_role_keys = inherited_role_keys(current_user)
+    allowed_ids = allowed_ids(elements, catalog, current_user, authorizer, user_role_keys)
 
-    if root_denied?(root, elements, catalog, current_user, authorizer, user_role_keys) do
+    if root_denied?(root, elements, allowed_ids) do
       spec
       |> Map.put("root", nil)
       |> Map.put("elements", %{})
     else
-      allowed_ids =
-        elements
-        |> Enum.filter(fn {_id, element} ->
-          allowed_element?(element, catalog, current_user, authorizer, user_role_keys)
-        end)
-        |> Enum.map(fn {id, _} -> id end)
-        |> MapSet.new()
-
       blocked_ids =
         blocked_reachable_ids(
           root,
           elements,
-          catalog,
-          current_user,
-          authorizer,
-          user_role_keys
+          allowed_ids
         )
 
       retained_ids = MapSet.difference(allowed_ids, blocked_ids)
@@ -75,17 +65,14 @@ defmodule JsonLiveviewRender.Permissions do
   defp root_denied?(
          nil,
          _elements,
-         _catalog,
-         _current_user,
-         _authorizer,
-         _user_role_keys
+         _allowed_ids
        ),
        do: false
 
-  defp root_denied?(root, elements, catalog, current_user, authorizer, user_role_keys) do
+  defp root_denied?(root, elements, allowed_ids) do
     case Map.fetch(elements, root) do
-      {:ok, root_element} ->
-        not allowed_element?(root_element, catalog, current_user, authorizer, user_role_keys)
+      {:ok, _root_element} ->
+        not MapSet.member?(allowed_ids, root)
 
       :error ->
         false
@@ -95,22 +82,16 @@ defmodule JsonLiveviewRender.Permissions do
   defp blocked_reachable_ids(
          nil,
          _elements,
-         _catalog,
-         _current_user,
-         _authorizer,
-         _user_role_keys
+         _allowed_ids
        ),
        do: MapSet.new()
 
-  defp blocked_reachable_ids(root, elements, catalog, current_user, authorizer, user_role_keys) do
+  defp blocked_reachable_ids(root, elements, allowed_ids) do
     {blocked_ids, _visited} =
       collect_blocked_ids(
         root,
         elements,
-        catalog,
-        current_user,
-        authorizer,
-        user_role_keys,
+        allowed_ids,
         false,
         MapSet.new(),
         MapSet.new()
@@ -122,10 +103,7 @@ defmodule JsonLiveviewRender.Permissions do
   defp collect_blocked_ids(
          id,
          elements,
-         catalog,
-         current_user,
-         authorizer,
-         user_role_keys,
+         allowed_ids,
          blocked?,
          acc,
          visited
@@ -137,9 +115,7 @@ defmodule JsonLiveviewRender.Permissions do
       true ->
         case Map.fetch(elements, id) do
           {:ok, element} ->
-            denied_here =
-              blocked? or
-                not allowed_element?(element, catalog, current_user, authorizer, user_role_keys)
+            denied_here = blocked? or not MapSet.member?(allowed_ids, id)
 
             visited = MapSet.put(visited, id)
             acc = if denied_here, do: MapSet.put(acc, id), else: acc
@@ -150,10 +126,7 @@ defmodule JsonLiveviewRender.Permissions do
               collect_blocked_ids(
                 child_id,
                 elements,
-                catalog,
-                current_user,
-                authorizer,
-                user_role_keys,
+                allowed_ids,
                 denied_here,
                 inner_acc,
                 inner_visited
@@ -164,6 +137,19 @@ defmodule JsonLiveviewRender.Permissions do
             {acc, visited}
         end
     end
+  end
+
+  defp allowed_ids(elements, catalog, current_user, authorizer, user_role_keys) do
+    {allowed_ids, _type_cache} =
+      Enum.reduce(elements, {MapSet.new(), %{}}, fn {id, element}, {acc, type_cache} ->
+        {allowed?, type_cache} =
+          allowed_element?(element, catalog, current_user, authorizer, user_role_keys, type_cache)
+
+        acc = if allowed?, do: MapSet.put(acc, id), else: acc
+        {acc, type_cache}
+      end)
+
+    allowed_ids
   end
 
   defp allowed_element?(%{"type" => type}, catalog, current_user, authorizer, user_role_keys) do
@@ -183,6 +169,34 @@ defmodule JsonLiveviewRender.Permissions do
 
   defp allowed_element?(_element, _catalog, _current_user, _authorizer, _user_role_keys),
     do: false
+
+  defp allowed_element?(
+         %{"type" => type} = element,
+         catalog,
+         current_user,
+         authorizer,
+         user_role_keys,
+         type_cache
+       ) do
+    case Map.fetch(type_cache, type) do
+      {:ok, allowed?} ->
+        {allowed?, type_cache}
+
+      :error ->
+        allowed? = allowed_element?(element, catalog, current_user, authorizer, user_role_keys)
+        {allowed?, Map.put(type_cache, type, allowed?)}
+    end
+  end
+
+  defp allowed_element?(
+         _element,
+         _catalog,
+         _current_user,
+         _authorizer,
+         _user_role_keys,
+         type_cache
+       ),
+       do: {false, type_cache}
 
   defp allowed_by_policy?(
          %{required_mode: mode, required_roles: required_roles, deny_roles: deny_roles},
