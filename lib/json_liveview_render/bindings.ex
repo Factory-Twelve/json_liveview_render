@@ -41,30 +41,11 @@ defmodule JsonLiveviewRender.Bindings do
 
   defp ensure_no_binding_conflicts!(props, literal_props)
        when is_map(props) and is_map(literal_props) do
-    normalized_literal_keys =
-      literal_props
-      |> Map.keys()
-      |> Enum.map(&to_string/1)
-      |> MapSet.new()
-
-    normalized_prop_keys =
-      props
-      |> Map.keys()
-      |> Enum.map(&to_string/1)
-      |> MapSet.new()
-
     conflicts =
-      normalized_prop_keys
-      |> Enum.flat_map(fn key ->
-        if String.ends_with?(key, "_binding") do
-          resolved_key = String.replace_suffix(key, "_binding", "")
-
-          if MapSet.member?(normalized_literal_keys, resolved_key), do: [resolved_key], else: []
-        else
-          []
-        end
-      end)
-      |> Enum.uniq()
+      literal_props
+      |> normalized_keys()
+      |> MapSet.intersection(resolved_binding_keys(props))
+      |> MapSet.to_list()
       |> Enum.sort()
 
     if conflicts != [] do
@@ -74,6 +55,25 @@ defmodule JsonLiveviewRender.Bindings do
         message:
           "conflicting literal and binding props for #{inspect(conflicts)}; provide either the literal prop or the *_binding variant"
     end
+  end
+
+  defp normalized_keys(props) do
+    props
+    |> Map.keys()
+    |> Enum.map(&to_string/1)
+    |> MapSet.new()
+  end
+
+  defp resolved_binding_keys(props) do
+    Enum.reduce(props, MapSet.new(), fn {key, _value}, acc ->
+      key = to_string(key)
+
+      if String.ends_with?(key, "_binding") do
+        MapSet.put(acc, String.replace_suffix(key, "_binding", ""))
+      else
+        acc
+      end
+    end)
   end
 
   defp extract_binding_key(value) when is_binary(value), do: value

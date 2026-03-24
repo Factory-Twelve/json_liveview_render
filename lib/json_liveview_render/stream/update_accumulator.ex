@@ -39,12 +39,14 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
     strict? = Keyword.get(opts, :strict, true)
 
     with {:ok, normalized_update} <- normalize_update(update) do
-      case replay_status(accumulator, normalized_update) do
+      fingerprint = update_fingerprint(normalized_update)
+
+      case replay_status(accumulator, normalized_update, fingerprint) do
         :duplicate ->
           {:ok, accumulator}
 
         :ok ->
-          do_apply(accumulator, normalized_update, catalog, strict?)
+          do_apply(accumulator, normalized_update, fingerprint, catalog, strict?)
 
         {:error, reason} ->
           {:error, reason}
@@ -52,7 +54,7 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
     end
   end
 
-  defp do_apply(accumulator, normalized_update, catalog, strict?) do
+  defp do_apply(accumulator, normalized_update, fingerprint, catalog, strict?) do
     sequence = normalized_update["sequence"]
 
     with :ok <- ensure_open(accumulator),
@@ -60,8 +62,6 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
          {:ok, next_spec} <- apply_elements(next_spec, normalized_update, catalog, strict?),
          {:ok, next_complete?} <-
            apply_finalize(accumulator, normalized_update, next_spec, catalog, strict?) do
-      fingerprint = update_fingerprint(normalized_update)
-
       {applied_updates, applied_sequence_order} =
         track_applied_update(accumulator, sequence, fingerprint)
 
@@ -79,11 +79,12 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
 
   defp replay_status(
          %__MODULE__{applied_updates: applied_updates, last_sequence: last_sequence},
-         %{"sequence" => sequence} = normalized_update
+         %{"sequence" => sequence},
+         fingerprint
        ) do
     case Map.fetch(applied_updates, sequence) do
-      {:ok, fingerprint} ->
-        if fingerprint == update_fingerprint(normalized_update) do
+      {:ok, tracked_fingerprint} ->
+        if tracked_fingerprint == fingerprint do
           :duplicate
         else
           {:error, {:conflicting_update_sequence, sequence}}

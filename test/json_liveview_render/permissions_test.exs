@@ -198,6 +198,49 @@ defmodule JsonLiveviewRender.PermissionsTest do
     assert Map.has_key?(filtered["elements"], "metric_1")
   end
 
+  test "reuses permission checks for repeated component types" do
+    {:ok, counter} = Agent.start_link(fn -> 0 end)
+
+    authorizer = fn _current_user, _required_role ->
+      Agent.update(counter, &(&1 + 1))
+      false
+    end
+
+    spec = %{
+      "root" => "page",
+      "elements" => %{
+        "page" => %{
+          "type" => "row",
+          "props" => %{},
+          "children" => ["admin_1", "admin_2", "admin_3"]
+        },
+        "admin_1" => %{
+          "type" => "admin_panel",
+          "props" => %{"title" => "Top Secret 1"},
+          "children" => []
+        },
+        "admin_2" => %{
+          "type" => "admin_panel",
+          "props" => %{"title" => "Top Secret 2"},
+          "children" => []
+        },
+        "admin_3" => %{
+          "type" => "admin_panel",
+          "props" => %{"title" => "Top Secret 3"},
+          "children" => []
+        }
+      }
+    }
+
+    filtered = Permissions.filter(spec, %{role: :member}, Catalog, authorizer)
+
+    assert Map.has_key?(filtered["elements"], "page")
+    refute Map.has_key?(filtered["elements"], "admin_1")
+    refute Map.has_key?(filtered["elements"], "admin_2")
+    refute Map.has_key?(filtered["elements"], "admin_3")
+    assert Agent.get(counter, & &1) == 1
+  end
+
   test "supports list shorthand required roles using any_of semantics" do
     spec = %{
       "root" => "parent",
