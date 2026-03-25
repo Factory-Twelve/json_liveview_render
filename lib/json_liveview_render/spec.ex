@@ -240,16 +240,25 @@ defmodule JsonLiveviewRender.Spec do
       Enum.reduce(elements, {[], %{}}, fn {id, element}, {duplicate_errors, acc_parent_map} ->
         children = if is_map(element), do: Map.get(element, "children", []), else: []
 
-        {_seen_children, duplicate_errors, parent_map} =
-          Enum.reduce(children, {MapSet.new(), duplicate_errors, acc_parent_map}, fn child,
-                                                                                     {seen_children,
-                                                                                      inner_duplicate_errors,
-                                                                                      inner_parent_map} ->
+        {_seen_children, _reported_duplicates, duplicate_errors, parent_map} =
+          Enum.reduce(
+            children,
+            {MapSet.new(), MapSet.new(), duplicate_errors, acc_parent_map},
+            fn child,
+               {seen_children, reported_duplicates, inner_duplicate_errors, inner_parent_map} ->
             next_duplicate_errors =
-              if is_binary(child) and MapSet.member?(seen_children, child) do
+              if is_binary(child) and MapSet.member?(seen_children, child) and
+                   not MapSet.member?(reported_duplicates, child) do
                 [Errors.duplicate_child(id, child) | inner_duplicate_errors]
               else
                 inner_duplicate_errors
+              end
+
+            next_reported_duplicates =
+              if is_binary(child) and MapSet.member?(seen_children, child) do
+                MapSet.put(reported_duplicates, child)
+              else
+                reported_duplicates
               end
 
             next_parent_map =
@@ -259,8 +268,14 @@ defmodule JsonLiveviewRender.Spec do
                 inner_parent_map
               end
 
-            {MapSet.put(seen_children, child), next_duplicate_errors, next_parent_map}
-          end)
+              {
+                MapSet.put(seen_children, child),
+                next_reported_duplicates,
+                next_duplicate_errors,
+                next_parent_map
+              }
+            end
+          )
 
         {duplicate_errors, parent_map}
       end)

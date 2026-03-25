@@ -30,8 +30,8 @@ hooks:
       done
     fi
   before_run: |
-    rm -rf .codex
-    cp -R /Users/jeff/dev/json_liveview_render/.codex .codex
+    git restore --source=HEAD --worktree .codex 2>/dev/null || true
+    git clean -fd .codex
 agent:
   max_concurrent_agents: 3
   max_turns: 20

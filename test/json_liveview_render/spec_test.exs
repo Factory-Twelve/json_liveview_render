@@ -209,6 +209,22 @@ defmodule JsonLiveviewRender.SpecTest do
     assert Enum.any?(reasons, fn {tag, _} -> tag == :duplicate_child end)
   end
 
+  test "reports one duplicate child error per repeated child id" do
+    spec =
+      put_in(valid_spec(), ["elements", "page", "children"], [
+        "metric_1",
+        "metric_1",
+        "metric_1"
+      ])
+
+    assert {:error, reasons} = Spec.validate(spec, Catalog)
+
+    duplicate_errors =
+      Enum.filter(reasons, fn {tag, _} -> tag == :duplicate_child end)
+
+    assert length(duplicate_errors) == 1
+  end
+
   test "rejects non-root elements with multiple parents" do
     spec =
       valid_spec()
