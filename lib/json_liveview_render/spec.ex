@@ -246,27 +246,27 @@ defmodule JsonLiveviewRender.Spec do
             {MapSet.new(), MapSet.new(), duplicate_errors, acc_parent_map},
             fn child,
                {seen_children, reported_duplicates, inner_duplicate_errors, inner_parent_map} ->
-            next_duplicate_errors =
-              if is_binary(child) and MapSet.member?(seen_children, child) and
-                   not MapSet.member?(reported_duplicates, child) do
-                [Errors.duplicate_child(id, child) | inner_duplicate_errors]
-              else
-                inner_duplicate_errors
-              end
+              next_duplicate_errors =
+                if is_binary(child) and MapSet.member?(seen_children, child) and
+                     not MapSet.member?(reported_duplicates, child) do
+                  [Errors.duplicate_child(id, child) | inner_duplicate_errors]
+                else
+                  inner_duplicate_errors
+                end
 
-            next_reported_duplicates =
-              if is_binary(child) and MapSet.member?(seen_children, child) do
-                MapSet.put(reported_duplicates, child)
-              else
-                reported_duplicates
-              end
+              next_reported_duplicates =
+                if is_binary(child) and MapSet.member?(seen_children, child) do
+                  MapSet.put(reported_duplicates, child)
+                else
+                  reported_duplicates
+                end
 
-            next_parent_map =
-              if is_binary(child) and child != root do
-                Map.update(inner_parent_map, child, MapSet.new([id]), &MapSet.put(&1, id))
-              else
-                inner_parent_map
-              end
+              next_parent_map =
+                if is_binary(child) and child != root do
+                  Map.update(inner_parent_map, child, MapSet.new([id]), &MapSet.put(&1, id))
+                else
+                  inner_parent_map
+                end
 
               {
                 MapSet.put(seen_children, child),
