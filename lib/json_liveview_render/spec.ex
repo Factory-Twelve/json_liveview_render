@@ -223,8 +223,7 @@ defmodule JsonLiveviewRender.Spec do
     allow_missing_root? = Keyword.get(opts, :allow_missing_root, false)
     allow_unresolved_children? = Keyword.get(opts, :allow_unresolved_children, false)
 
-    duplicate_child_errors = duplicate_child_errors(elements)
-    multiple_parent_errors = multiple_parent_errors(root, elements)
+    {duplicate_child_errors, multiple_parent_errors} = parentage_errors(root, elements)
 
     unreachable_errors =
       if allow_missing_root? or allow_unresolved_children? do
@@ -236,42 +235,61 @@ defmodule JsonLiveviewRender.Spec do
     duplicate_child_errors ++ multiple_parent_errors ++ unreachable_errors
   end
 
-  defp duplicate_child_errors(elements) do
-    Enum.flat_map(elements, fn {id, element} ->
-      children = if is_map(element), do: Map.get(element, "children", []), else: []
-
-      children
-      |> Enum.frequencies()
-      |> Enum.flat_map(fn
-        {child, count} when count > 1 and is_binary(child) -> [Errors.duplicate_child(id, child)]
-        _ -> []
-      end)
-    end)
-  end
-
-  defp multiple_parent_errors(root, elements) do
-    parent_map =
-      Enum.reduce(elements, %{}, fn {id, element}, acc ->
+  defp parentage_errors(root, elements) do
+    {duplicate_child_errors, parent_map} =
+      Enum.reduce(elements, {[], %{}}, fn {id, element}, {duplicate_errors, acc_parent_map} ->
         children = if is_map(element), do: Map.get(element, "children", []), else: []
 
-        children
-        |> Enum.reduce(acc, fn child, child_acc ->
-          if is_binary(child) and child != root do
-            Map.update(child_acc, child, MapSet.new([id]), &MapSet.put(&1, id))
-          else
-            child_acc
-          end
-        end)
+        {_seen_children, _reported_duplicates, duplicate_errors, parent_map} =
+          Enum.reduce(
+            children,
+            {MapSet.new(), MapSet.new(), duplicate_errors, acc_parent_map},
+            fn child,
+               {seen_children, reported_duplicates, inner_duplicate_errors, inner_parent_map} ->
+              next_duplicate_errors =
+                if is_binary(child) and MapSet.member?(seen_children, child) and
+                     not MapSet.member?(reported_duplicates, child) do
+                  [Errors.duplicate_child(id, child) | inner_duplicate_errors]
+                else
+                  inner_duplicate_errors
+                end
+
+              next_reported_duplicates =
+                if is_binary(child) and MapSet.member?(seen_children, child) do
+                  MapSet.put(reported_duplicates, child)
+                else
+                  reported_duplicates
+                end
+
+              next_parent_map =
+                if is_binary(child) and child != root do
+                  Map.update(inner_parent_map, child, MapSet.new([id]), &MapSet.put(&1, id))
+                else
+                  inner_parent_map
+                end
+
+              {
+                MapSet.put(seen_children, child),
+                next_reported_duplicates,
+                next_duplicate_errors,
+                next_parent_map
+              }
+            end
+          )
+
+        {duplicate_errors, parent_map}
       end)
 
-    parent_map
-    |> Enum.flat_map(fn {child, parents} ->
-      if MapSet.size(parents) > 1 do
-        [Errors.multiple_parents(child, MapSet.to_list(parents))]
-      else
-        []
-      end
-    end)
+    multiple_parent_errors =
+      Enum.flat_map(parent_map, fn {child, parents} ->
+        if MapSet.size(parents) > 1 do
+          [Errors.multiple_parents(child, MapSet.to_list(parents))]
+        else
+          []
+        end
+      end)
+
+    {Enum.reverse(duplicate_child_errors), multiple_parent_errors}
   end
 
   defp unreachable_errors(root, elements) do

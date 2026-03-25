@@ -62,14 +62,23 @@ defmodule JsonLiveviewRender.Renderer do
 
     root = filtered_spec["root"]
 
+    type_context =
+      build_type_context(
+        filtered_spec,
+        assigns.catalog,
+        assigns.registry,
+        assigns.error_boundary
+      )
+
     assigns =
       assigns
       |> assign(:_genui_spec, filtered_spec)
       |> assign(:_genui_root, root)
+      |> assign(:_genui_type_context, type_context)
 
     ~H"""
     <%= if @_genui_root && Map.has_key?(@_genui_spec["elements"], @_genui_root) do %>
-      <%= render_element(@_genui_root, @_genui_spec, @catalog, @registry, @bindings, @check_binding_types, @error_boundary) %>
+      <%= render_element(@_genui_root, @_genui_spec, @_genui_type_context, @bindings, @check_binding_types, @error_boundary) %>
     <% end %>
 
     <%= if dev_tools_enabled?(@dev_tools, @dev_tools_enabled, @dev_tools_force_disable) do %>
@@ -107,7 +116,110 @@ defmodule JsonLiveviewRender.Renderer do
   defp normalize_dev_tools_enabled(true), do: true
   defp normalize_dev_tools_enabled(_), do: false
 
-  defp render_element(id, spec, catalog, registry, bindings, check_binding_types, error_boundary) do
+  defp build_type_context(
+         %{"root" => root, "elements" => elements},
+         catalog,
+         registry,
+         error_boundary
+       ) do
+    {_visited, _types, context} =
+      collect_type_context(
+        root,
+        elements,
+        catalog,
+        registry,
+        error_boundary,
+        MapSet.new(),
+        MapSet.new(),
+        %{}
+      )
+
+    context
+  end
+
+  defp collect_type_context(
+         nil,
+         _elements,
+         _catalog,
+         _registry,
+         _error_boundary,
+         visited_ids,
+         seen_types,
+         context
+       ),
+       do: {visited_ids, seen_types, context}
+
+  defp collect_type_context(
+         id,
+         elements,
+         catalog,
+         registry,
+         error_boundary,
+         visited_ids,
+         seen_types,
+         context
+       ) do
+    cond do
+      MapSet.member?(visited_ids, id) ->
+        {visited_ids, seen_types, context}
+
+      true ->
+        case Map.fetch(elements, id) do
+          {:ok, %{"type" => type} = element} ->
+            visited_ids = MapSet.put(visited_ids, id)
+
+            {seen_types, context} =
+              put_type_context(type, catalog, registry, error_boundary, seen_types, context)
+
+            Enum.reduce(
+              Map.get(element, "children", []),
+              {visited_ids, seen_types, context},
+              fn child_id, {acc_visited, acc_seen_types, acc_context} ->
+                collect_type_context(
+                  child_id,
+                  elements,
+                  catalog,
+                  registry,
+                  error_boundary,
+                  acc_visited,
+                  acc_seen_types,
+                  acc_context
+                )
+              end
+            )
+
+          _ ->
+            {MapSet.put(visited_ids, id), seen_types, context}
+        end
+    end
+  end
+
+  defp put_type_context(type, catalog, registry, error_boundary, seen_types, context) do
+    if MapSet.member?(seen_types, type) do
+      {seen_types, context}
+    else
+      component = catalog.component(type)
+
+      metadata = %{
+        assign_key_map: ComponentDef.assign_key_map(component),
+        callback: fetch_callback(registry, type, error_boundary),
+        component: component,
+        defaults: ComponentDef.defaults(component)
+      }
+
+      {MapSet.put(seen_types, type), Map.put(context, type, metadata)}
+    end
+  end
+
+  defp fetch_callback(registry, type, false), do: Registry.fetch!(registry, type)
+
+  defp fetch_callback(registry, type, true) do
+    Registry.fetch!(registry, type)
+  rescue
+    exception -> {:error, exception}
+  end
+
+  defp render_element(id, spec, type_context, bindings, check_binding_types, error_boundary) do
     element = get_in(spec, ["elements", id])
 
     case element do
@@ -121,8 +233,7 @@ defmodule JsonLiveviewRender.Renderer do
               type,
               element,
               spec,
-              catalog,
-              registry,
+              type_context,
               bindings,
               check_binding_types,
               error_boundary
@@ -140,8 +251,7 @@ defmodule JsonLiveviewRender.Renderer do
             type,
             element,
             spec,
-            catalog,
-            registry,
+            type_context,
             bindings,
             check_binding_types,
             error_boundary
@@ -154,17 +264,22 @@ defmodule JsonLiveviewRender.Renderer do
          type,
          element,
          spec,
-         catalog,
-         registry,
+         type_context,
          bindings,
          check_binding_types,
          error_boundary
        ) do
-    component = catalog.component(type)
-    callback = Registry.fetch!(registry, type)
+    %{
+      assign_key_map: assign_key_map,
+      callback: callback,
+      component: component,
+      defaults: defaults
+    } =
+      Map.fetch!(type_context, type)
 
+    callback = resolve_callback!(callback)
     raw_props = Map.get(element, "props", %{})
-    props_with_defaults = apply_defaults(raw_props, component)
+    props_with_defaults = apply_defaults(raw_props, defaults)
 
     resolved_props =
       Bindings.resolve_props(props_with_defaults, bindings,
@@ -180,34 +295,25 @@ defmodule JsonLiveviewRender.Renderer do
         &render_element(
           &1,
           spec,
-          catalog,
-          registry,
+          type_context,
           bindings,
           check_binding_types,
           error_boundary
         )
       )
 
-    assigns = to_component_assigns(component, resolved_props, children)
+    assigns = to_component_assigns(assign_key_map, resolved_props, children)
 
     callback.(assigns)
   end
 
-  defp apply_defaults(props, prop_defs) do
-    defaults =
-      case prop_defs do
-        %ComponentDef{} = component -> ComponentDef.defaults(component)
-        _ -> %{}
-      end
+  defp resolve_callback!({:error, exception}), do: raise(exception)
+  defp resolve_callback!(callback), do: callback
 
-    Enum.reduce(defaults, props, fn {key, value}, acc ->
-      if Map.has_key?(acc, key), do: acc, else: Map.put(acc, key, value)
-    end)
-  end
+  defp apply_defaults(props, defaults) when defaults == %{}, do: props
+  defp apply_defaults(props, defaults), do: Map.merge(defaults, props)
 
-  defp to_component_assigns(component, resolved_props, children) do
-    assign_key_map = ComponentDef.assign_key_map(component)
-
+  defp to_component_assigns(assign_key_map, resolved_props, children) do
     prop_assigns =
       Enum.reduce(resolved_props, %{}, fn {key, value}, acc ->
         case Map.fetch(assign_key_map, key) do

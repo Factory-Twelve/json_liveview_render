@@ -42,6 +42,33 @@ defmodule JsonLiveviewRender.RendererTest do
     render(:defaulted_table, &DefaultBindingComponents.defaulted_table/1)
   end
 
+  defmodule CountingRegistry do
+    alias JsonLiveviewRenderTest.Fixtures.Components
+
+    def __genui_registry_fetch__(type) when type in ["row", :row] do
+      record_fetch("row", &Components.row/1)
+    end
+
+    def __genui_registry_fetch__(type) when type in ["metric", :metric] do
+      record_fetch("metric", &Components.metric/1)
+    end
+
+    def __genui_registry_fetch__(_type), do: :error
+
+    def __genui_registry_has_mapping__(type) when type in ["row", :row, "metric", :metric],
+      do: true
+
+    def __genui_registry_has_mapping__(_type), do: false
+
+    def __genui_registry_catalog__, do: Catalog
+
+    defp record_fetch(type, callback) do
+      counts = Process.get(:renderer_registry_fetch_counts, %{})
+      Process.put(:renderer_registry_fetch_counts, Map.update(counts, type, 1, &(&1 + 1)))
+      {:ok, callback}
+    end
+  end
+
   @dev_tools_spec %{
     "root" => "metric_1",
     "elements" => %{
@@ -87,6 +114,45 @@ defmodule JsonLiveviewRender.RendererTest do
     assert html =~ "$142,300"
     assert html =~ "rows"
     assert html =~ ">2<"
+  end
+
+  test "caches registry callbacks once per reachable component type during render" do
+    Process.put(:renderer_registry_fetch_counts, %{})
+
+    spec = %{
+      "root" => "page",
+      "elements" => %{
+        "page" => %{
+          "type" => "row",
+          "props" => %{},
+          "children" => ["metric_1", "metric_2"]
+        },
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Revenue", "value" => "$142,300"},
+          "children" => []
+        },
+        "metric_2" => %{
+          "type" => "metric",
+          "props" => %{"label" => "Cost", "value" => "$41,100"},
+          "children" => []
+        }
+      }
+    }
+
+    html =
+      JsonLiveviewRender.Test.render_spec(spec, Catalog,
+        registry: CountingRegistry,
+        current_user: %{role: :member},
+        authorizer: Authorizer,
+        bindings: %{}
+      )
+
+    assert html =~ "Revenue"
+    assert html =~ "Cost"
+    assert Process.get(:renderer_registry_fetch_counts) == %{"metric" => 1, "row" => 1}
+  after
+    Process.delete(:renderer_registry_fetch_counts)
   end
 
   test "renders manual catalogs built from raw component defs" do

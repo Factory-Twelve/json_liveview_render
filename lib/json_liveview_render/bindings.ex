@@ -18,7 +18,9 @@ defmodule JsonLiveviewRender.Bindings do
     prop_defs = Keyword.get(opts, :prop_defs, %{})
     check_types? = Keyword.get(opts, :check_types, false)
     literal_props = Keyword.get(opts, :literal_props, props)
-    ensure_no_binding_conflicts!(props, literal_props)
+    has_binding_props? = has_binding_props?(props)
+
+    ensure_no_binding_conflicts!(props, literal_props, has_binding_props?)
 
     Enum.reduce(props, %{}, fn {key, value}, acc ->
       key = to_string(key)
@@ -39,7 +41,9 @@ defmodule JsonLiveviewRender.Bindings do
     end)
   end
 
-  defp ensure_no_binding_conflicts!(props, literal_props)
+  defp ensure_no_binding_conflicts!(_props, _literal_props, false), do: :ok
+
+  defp ensure_no_binding_conflicts!(props, literal_props, true)
        when is_map(props) and is_map(literal_props) do
     conflicts =
       literal_props
@@ -55,6 +59,14 @@ defmodule JsonLiveviewRender.Bindings do
         message:
           "conflicting literal and binding props for #{inspect(conflicts)}; provide either the literal prop or the *_binding variant"
     end
+  end
+
+  defp has_binding_props?(props) do
+    Enum.any?(props, fn {key, _value} ->
+      key
+      |> to_string()
+      |> String.ends_with?("_binding")
+    end)
   end
 
   defp normalized_keys(props) do
