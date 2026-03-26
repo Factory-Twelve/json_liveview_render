@@ -415,8 +415,14 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
 
     ssl_opts =
       case request.url do
-        "https://" <> _rest -> [ssl: default_ssl_options(config, context)]
-        _ -> []
+        "https://" <> _rest ->
+          case default_ssl_options(config, context) do
+            [] -> []
+            options -> [ssl: options]
+          end
+
+        _ ->
+          []
       end
 
     [timeout: timeout] ++ ssl_opts
@@ -443,19 +449,26 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
       |> Map.get(:ssl, Map.get(context, :ssl, %{}))
       |> normalize_ssl_config()
 
-    verify =
-      case Keyword.get(ssl_config, :verify) do
-        :verify_none -> :verify_none
-        _ -> :verify_peer
-      end
+    case Keyword.get(ssl_config, :verify, :default) do
+      :verify_none ->
+        Keyword.put(ssl_config, :verify, :verify_none)
 
-    if verify == :verify_none do
-      Keyword.put(ssl_config, :verify, :verify_none)
-    else
-      ssl_config
-      |> Keyword.put(:verify, :verify_peer)
-      |> maybe_put_default_cacerts()
-      |> maybe_put_default_hostname_check()
+      :verify_peer ->
+        ssl_config
+        |> maybe_put_default_cacerts()
+        |> Keyword.put(:verify, :verify_peer)
+        |> maybe_put_default_hostname_check()
+
+      _ ->
+        case maybe_put_default_cacerts(ssl_config) do
+          [] ->
+            ssl_config
+
+          verified_ssl_opts ->
+            verified_ssl_opts
+            |> Keyword.put(:verify, :verify_peer)
+            |> maybe_put_default_hostname_check()
+        end
     end
   end
 
@@ -484,6 +497,22 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
   end
 
   defp default_cacerts_option do
+    case public_key_cacerts_option() do
+      [] -> certifi_cacerts_option()
+      cacerts_option -> cacerts_option
+    end
+  end
+
+  defp default_hostname_check_option do
+    if Code.ensure_loaded?(:public_key) and
+         function_exported?(:public_key, :pkix_verify_hostname_match_fun, 1) do
+      [customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]]
+    else
+      []
+    end
+  end
+
+  defp public_key_cacerts_option do
     if Code.ensure_loaded?(:public_key) and function_exported?(:public_key, :cacerts_get, 0) do
       try do
         case :public_key.cacerts_get() do
@@ -500,10 +529,18 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
     end
   end
 
-  defp default_hostname_check_option do
-    if Code.ensure_loaded?(:public_key) and
-         function_exported?(:public_key, :pkix_verify_hostname_match_fun, 1) do
-      [customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]]
+  defp certifi_cacerts_option do
+    if Code.ensure_loaded?(:certifi) and function_exported?(:certifi, :cacerts, 0) do
+      try do
+        case :certifi.cacerts() do
+          certs when is_list(certs) and certs != [] -> [cacerts: certs]
+          _ -> []
+        end
+      rescue
+        _ -> []
+      catch
+        _kind, _reason -> []
+      end
     else
       []
     end

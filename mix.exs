@@ -32,6 +32,7 @@ defmodule JsonLiveviewRender.MixProject do
 
   defp deps do
     [
+      {:certifi, "~> 2.15"},
       {:jason, "~> 1.4"},
       {:yaml_elixir, "~> 2.12"},
       {:nimble_options, "~> 1.1"},
