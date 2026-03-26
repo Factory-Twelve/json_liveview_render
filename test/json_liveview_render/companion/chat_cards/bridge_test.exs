@@ -25,4 +25,26 @@ defmodule JsonLiveviewRender.Companion.ChatCards.BridgeTest do
     assert Enum.any?(ir.body_lines, &String.contains?(&1, "mystery_widget"))
     assert Enum.any?(warnings, &(&1.code == :unknown_leaf_type))
   end
+
+  test "data_table summaries still use rows_binding when rows are unresolved" do
+    spec = %{
+      "root" => "table_card",
+      "elements" => %{
+        "table_card" => %{
+          "type" => "data_table",
+          "props" => %{
+            "columns" => [%{"key" => "id", "label" => "Invoice #"}],
+            "rows_binding" => "overdue_invoices"
+          },
+          "children" => []
+        }
+      }
+    }
+
+    assert {:ok, ir, []} = Bridge.to_ir(spec)
+
+    assert ir.body_lines == [
+             "Table: %{\"key\" => \"id\", \"label\" => \"Invoice #\"} / overdue_invoices"
+           ]
+  end
 end

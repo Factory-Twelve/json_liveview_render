@@ -263,6 +263,19 @@ defmodule JsonLiveviewRender.SpecTest do
     assert Map.has_key?(validated["elements"], "orphan")
   end
 
+  test "validate_partial/3 defers multiple-parent checks for unresolved child ids" do
+    spec = %{
+      "root" => "page",
+      "elements" => %{
+        "page" => %{"type" => "row", "props" => %{}, "children" => ["future"]},
+        "sidebar" => %{"type" => "row", "props" => %{}, "children" => ["future"]}
+      }
+    }
+
+    assert {:ok, validated} = Spec.validate_partial(spec, Catalog)
+    assert Map.keys(validated["elements"]) |> Enum.sort() == ["page", "sidebar"]
+  end
+
   property "acyclic linear chain specs validate" do
     check all(spec <- Generators.valid_linear_spec(max_len: 20)) do
       assert {:ok, _} = Spec.validate(spec, Catalog)

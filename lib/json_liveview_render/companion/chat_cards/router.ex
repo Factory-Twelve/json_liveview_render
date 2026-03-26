@@ -31,7 +31,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Router do
           config.authorizer
         )
 
-      with {:ok, ir, bridge_warnings} <- Bridge.to_ir(filtered_spec),
+      with {:ok, ir, bridge_warnings} <- build_ir(filtered_spec),
            {:ok, outputs, target_warnings, action_envelopes} <-
              render_targets(config.targets, ir, config) do
         {:ok,
@@ -45,6 +45,26 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Router do
       end
     end
   end
+
+  defp build_ir(%{"root" => root, "elements" => elements} = filtered_spec)
+       when is_map(elements) do
+    if is_binary(root) and Map.has_key?(elements, root) do
+      Bridge.to_ir(filtered_spec)
+    else
+      {:ok, nil,
+       [
+         Warnings.new(
+           :root_filtered,
+           :bridge,
+           ["root"],
+           "root element is not visible after permission filtering",
+           %{}
+         )
+       ]}
+    end
+  end
+
+  defp build_ir(_filtered_spec), do: {:error, :invalid_filtered_spec}
 
   @doc false
   @spec compile_and_send(map() | String.t(), keyword()) ::
@@ -101,37 +121,42 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Router do
   defp normalize_targets(_), do: {:error, {:invalid_targets, :expected_list}}
 
   defp render_targets(targets, ir, config) do
-    Enum.reduce_while(targets, {:ok, %{}, [], []}, fn target, {:ok, outputs, warnings, actions} ->
-      with {:ok, module} <- Target.module_for(target),
-           {:ok, payload, target_warnings, action_refs} <-
-             module.render(ir,
-               slack_surface: config.slack_surface,
-               whatsapp_mode: config.whatsapp_mode,
-               context: config.context,
-               filtered_spec: ir.filtered_spec
-             ) do
-        target_actions =
-          Enum.map(action_refs, fn action_ref ->
-            %{
-              version: "v1",
-              action_id: action_ref.action_id,
-              card_id: ir.card_id,
-              source_platform: target,
-              metadata: Map.get(action_ref, :metadata, %{})
-            }
-          end)
+    if is_nil(ir) do
+      {:ok, %{}, [], []}
+    else
+      Enum.reduce_while(targets, {:ok, %{}, [], []}, fn target,
+                                                        {:ok, outputs, warnings, actions} ->
+        with {:ok, module} <- Target.module_for(target),
+             {:ok, payload, target_warnings, action_refs} <-
+               module.render(ir,
+                 slack_surface: config.slack_surface,
+                 whatsapp_mode: config.whatsapp_mode,
+                 context: config.context,
+                 filtered_spec: ir.filtered_spec
+               ) do
+          target_actions =
+            Enum.map(action_refs, fn action_ref ->
+              %{
+                version: "v1",
+                action_id: action_ref.action_id,
+                card_id: ir.card_id,
+                source_platform: target,
+                metadata: Map.get(action_ref, :metadata, %{})
+              }
+            end)
 
-        {:cont,
-         {:ok, Map.put(outputs, target, payload), warnings ++ target_warnings,
-          actions ++ target_actions}}
-      else
-        :error ->
-          {:halt, {:error, {:unsupported_target, target}}}
+          {:cont,
+           {:ok, Map.put(outputs, target, payload), warnings ++ target_warnings,
+            actions ++ target_actions}}
+        else
+          :error ->
+            {:halt, {:error, {:unsupported_target, target}}}
 
-        {:error, reason} ->
-          {:halt, {:error, {:target_render_failed, target, reason}}}
-      end
-    end)
+          {:error, reason} ->
+            {:halt, {:error, {:target_render_failed, target, reason}}}
+        end
+      end)
+    end
   end
 
   defp fetch_sender(opts) do

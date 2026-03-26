@@ -67,6 +67,16 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
     end
   end
 
+  defmodule CaptureOptsHTTPClient do
+    @behaviour JsonLiveviewRender.Companion.ChatCards.Sender.HTTPClient
+
+    @impl true
+    def post(_url, _headers, _body, opts) do
+      Process.put(:captured_http_client_opts, opts)
+      {:ok, %{status: 200, body: ~s({"ok":true})}}
+    end
+  end
+
   defp public_dns_resolver(_host), do: {:ok, [{198, 51, 100, 42}]}
 
   test "delivers Slack message payload to chat.postMessage" do
@@ -293,5 +303,112 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
     assert {:error,
             {:invalid_destination_url, :teams, {:private_destination, "::ffff:127.0.0.1"}}} =
              HTTP.deliver(:teams, %{"type" => "AdaptiveCard"}, context)
+  end
+
+  test "blocks allowlisted hostname when DNS resolution fails during private-host checks" do
+    context = %{
+      http_client: CaptureHTTPClient,
+      dns_resolver: fn _host -> {:error, :nxdomain} end,
+      slack: %{
+        bot_token: "xoxb-token",
+        channel: "C123",
+        base_url: "https://sandbox.slack.test/api",
+        allowed_hosts: ["sandbox.slack.test"]
+      }
+    }
+
+    assert {:error,
+            {:invalid_destination_url, :slack,
+             {:dns_resolution_failed, "sandbox.slack.test", :nxdomain}}} =
+             HTTP.deliver(:slack, %{"blocks" => []}, context)
+  end
+
+  test "passes explicit verify_peer TLS options to the HTTP client for https requests" do
+    Process.delete(:captured_http_client_opts)
+
+    context = %{
+      http_client: CaptureOptsHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
+      slack: %{bot_token: "xoxb-token", channel: "C123", base_url: "https://slack.com/api"}
+    }
+
+    assert {:ok, %{"ok" => true}} = HTTP.deliver(:slack, %{"blocks" => []}, context)
+
+    opts = Process.get(:captured_http_client_opts)
+    ssl_opts = Keyword.fetch!(opts, :ssl)
+
+    assert Keyword.fetch!(opts, :timeout) == 5_000
+    assert Keyword.fetch!(ssl_opts, :verify) == :verify_peer
+    assert Keyword.has_key?(ssl_opts, :cacerts)
+  end
+
+  test "accepts OTP-style keyword-list SSL config" do
+    Process.delete(:captured_http_client_opts)
+
+    context = %{
+      http_client: CaptureOptsHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
+      slack: %{
+        bot_token: "xoxb-token",
+        channel: "C123",
+        base_url: "https://slack.com/api",
+        ssl: [verify: :verify_none, depth: 4]
+      }
+    }
+
+    assert {:ok, %{"ok" => true}} = HTTP.deliver(:slack, %{"blocks" => []}, context)
+
+    opts = Process.get(:captured_http_client_opts)
+    ssl_opts = Keyword.fetch!(opts, :ssl)
+
+    assert Keyword.fetch!(ssl_opts, :verify) == :verify_none
+    assert Keyword.fetch!(ssl_opts, :depth) == 4
+  end
+
+  test "normalizes string-keyed SSL config loaded from external config" do
+    Process.delete(:captured_http_client_opts)
+
+    context = %{
+      http_client: CaptureOptsHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
+      slack: %{
+        bot_token: "xoxb-token",
+        channel: "C123",
+        base_url: "https://slack.com/api",
+        ssl: %{"verify" => "verify_none", "depth" => 4}
+      }
+    }
+
+    assert {:ok, %{"ok" => true}} = HTTP.deliver(:slack, %{"blocks" => []}, context)
+
+    opts = Process.get(:captured_http_client_opts)
+    ssl_opts = Keyword.fetch!(opts, :ssl)
+
+    assert Keyword.fetch!(ssl_opts, :verify) == :verify_none
+    assert Keyword.fetch!(ssl_opts, :depth) == 4
+  end
+
+  test "preserves caller-provided TLS trust settings" do
+    Process.delete(:captured_http_client_opts)
+
+    context = %{
+      http_client: CaptureOptsHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
+      slack: %{
+        bot_token: "xoxb-token",
+        channel: "C123",
+        base_url: "https://slack.com/api",
+        ssl: %{verify: :verify_peer, cacerts: [:custom_ca], depth: 10}
+      }
+    }
+
+    assert {:ok, %{"ok" => true}} = HTTP.deliver(:slack, %{"blocks" => []}, context)
+
+    opts = Process.get(:captured_http_client_opts)
+    ssl_opts = Keyword.fetch!(opts, :ssl)
+
+    assert Keyword.fetch!(ssl_opts, :verify) == :verify_peer
+    assert Keyword.fetch!(ssl_opts, :cacerts) == [:custom_ca]
+    assert Keyword.fetch!(ssl_opts, :depth) == 10
   end
 end

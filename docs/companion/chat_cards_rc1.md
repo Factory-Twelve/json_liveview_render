@@ -29,6 +29,8 @@ Status: Internal experimental companion surface (non-core contract).
 ## Notes
 
 - Permission filtering happens before bridge/target rendering.
+- If permission filtering removes the root element, compilation returns an
+  empty outputs/actions result with a warning instead of failing.
 - Unknown mapped components degrade to text fallback with structured warnings.
 - Truncation and platform limit adjustments are deterministic and warning-backed.
 - Reference stylesheet: `docs/companion/chat_cards_reference.css`.
@@ -57,5 +59,7 @@ Optional:
   - `allow_insecure_http` (default `false`)
   - `allow_private_destinations` (default `false`)
   - `disable_host_allowlist` (default `false`)
+  - hostname resolution failures are treated as delivery errors when private
+    destinations are disallowed
 - retries via `retry: %{max_attempts, base_delay_ms, max_delay_ms, multiplier}`
 - idempotency via `idempotency: %{enabled, key, header}` and per-target overrides

@@ -20,7 +20,7 @@ defmodule JsonLiveviewRender.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger, :crypto]
+      extra_applications: [:logger, :crypto, :ssl]
     ]
   end
 
@@ -32,6 +32,7 @@ defmodule JsonLiveviewRender.MixProject do
 
   defp deps do
     [
+      {:certifi, "~> 2.15"},
       {:jason, "~> 1.4"},
       {:yaml_elixir, "~> 2.12"},
       {:nimble_options, "~> 1.1"},

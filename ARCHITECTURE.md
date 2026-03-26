@@ -108,6 +108,9 @@ Partial mode allows only these temporary gaps:
 - missing `root`
 - `root` pointing at an element id not materialized yet
 - child ids pointing at elements not materialized yet
+- tree-shape checks that depend on unresolved child ids are deferred until
+  those ids materialize; duplicate child ids within one parent are still
+  rejected immediately
 
 Partial mode does not create a second AST. The in-flight state is still the
 same canonical `root + elements` document, just validated with relaxed

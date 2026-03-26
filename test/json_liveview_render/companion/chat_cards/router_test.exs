@@ -80,4 +80,34 @@ defmodule JsonLiveviewRender.Companion.ChatCards.RouterTest do
     refute Enum.any?(member_body, &String.contains?(&1, "admin_only"))
     assert Enum.any?(admin_body, &String.contains?(&1, "admin_only"))
   end
+
+  test "compile returns an empty result when permission filtering removes the root" do
+    spec = %{
+      "root" => "admin_card",
+      "elements" => %{
+        "admin_card" => %{
+          "type" => "admin_only",
+          "props" => %{"message" => "internal escalation"},
+          "children" => []
+        }
+      }
+    }
+
+    assert {:ok, result} =
+             ChatCards.compile(spec,
+               catalog: JsonLiveviewRenderTest.Companion.ChatCards.Catalog,
+               current_user: %{role: :member},
+               authorizer: JsonLiveviewRenderTest.Companion.ChatCards.Authorizer,
+               targets: [:web_chat, :slack]
+             )
+
+    assert result.filtered_spec == %{"root" => nil, "elements" => %{}}
+    assert result.outputs == %{}
+    assert result.actions == []
+    assert result.deliveries == %{}
+
+    assert Enum.any?(result.warnings, fn warning ->
+             warning.code == :root_filtered
+           end)
+  end
 end

@@ -121,7 +121,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Bridge do
 
       type_text == "data_table" ->
         columns = get_prop(props, ["columns"])
-        rows = get_prop(props, ["rows_binding", "rows"])
+        rows = get_prop(props, ["rows", "rows_binding"])
         line = "Table: #{columns} / #{rows}"
         {append_body(ir, line), warnings}
 
@@ -183,10 +183,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Bridge do
 
   defp get_prop(props, keys) do
     Enum.find_value(keys, fn key ->
-      props
-      |> Map.get(key)
-      |> normalize_prop_value()
-      |> case do
+      case normalize_prop_value(Map.get(props, key)) do
         nil -> nil
         "" -> nil
         value -> value
@@ -194,6 +191,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Bridge do
     end)
   end
 
+  defp normalize_prop_value(nil), do: nil
   defp normalize_prop_value(value) when is_binary(value), do: value
   defp normalize_prop_value(value) when is_atom(value), do: Atom.to_string(value)
   defp normalize_prop_value(value) when is_number(value), do: to_string(value)
