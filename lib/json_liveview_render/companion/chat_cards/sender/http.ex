@@ -42,6 +42,19 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
     whatsapp: ["graph.facebook.com"]
   }
 
+  @ssl_option_string_keys %{
+    "verify" => :verify,
+    "cacerts" => :cacerts,
+    "cacertfile" => :cacertfile,
+    "customize_hostname_check" => :customize_hostname_check,
+    "depth" => :depth,
+    "server_name_indication" => :server_name_indication,
+    "versions" => :versions,
+    "verify_fun" => :verify_fun,
+    "partial_chain" => :partial_chain,
+    "reuse_sessions" => :reuse_sessions
+  }
+
   @doc """
   Delivers a compiled platform payload to the configured HTTP endpoint.
 
@@ -472,13 +485,48 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
     end
   end
 
-  defp normalize_ssl_config(%{} = ssl_config), do: Enum.into(ssl_config, [])
+  defp normalize_ssl_config(%{} = ssl_config) do
+    Enum.reduce(ssl_config, [], fn {key, value}, acc ->
+      case normalize_ssl_option(key, value) do
+        nil -> acc
+        {normalized_key, normalized_value} -> Keyword.put(acc, normalized_key, normalized_value)
+      end
+    end)
+  end
 
   defp normalize_ssl_config(ssl_config) when is_list(ssl_config) do
-    if Keyword.keyword?(ssl_config), do: ssl_config, else: []
+    Enum.reduce(ssl_config, [], fn
+      {key, value}, acc ->
+        case normalize_ssl_option(key, value) do
+          nil ->
+            acc
+
+          {normalized_key, normalized_value} ->
+            Keyword.put(acc, normalized_key, normalized_value)
+        end
+
+      _other, acc ->
+        acc
+    end)
   end
 
   defp normalize_ssl_config(_ssl_config), do: []
+
+  defp normalize_ssl_option(key, value) when is_atom(key),
+    do: {key, normalize_ssl_value(key, value)}
+
+  defp normalize_ssl_option(key, value) when is_binary(key) do
+    case Map.get(@ssl_option_string_keys, key) do
+      nil -> nil
+      normalized_key -> {normalized_key, normalize_ssl_value(normalized_key, value)}
+    end
+  end
+
+  defp normalize_ssl_option(_key, _value), do: nil
+
+  defp normalize_ssl_value(:verify, "verify_none"), do: :verify_none
+  defp normalize_ssl_value(:verify, "verify_peer"), do: :verify_peer
+  defp normalize_ssl_value(_key, value), do: value
 
   defp maybe_put_default_cacerts(ssl_opts) do
     if Enum.any?(ssl_opts, fn {key, _value} -> key in [:cacerts, :cacertfile] end) do

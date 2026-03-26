@@ -365,6 +365,29 @@ defmodule JsonLiveviewRender.Companion.ChatCards.SenderHTTPTest do
     assert Keyword.fetch!(ssl_opts, :depth) == 4
   end
 
+  test "normalizes string-keyed SSL config loaded from external config" do
+    Process.delete(:captured_http_client_opts)
+
+    context = %{
+      http_client: CaptureOptsHTTPClient,
+      dns_resolver: &public_dns_resolver/1,
+      slack: %{
+        bot_token: "xoxb-token",
+        channel: "C123",
+        base_url: "https://slack.com/api",
+        ssl: %{"verify" => "verify_none", "depth" => 4}
+      }
+    }
+
+    assert {:ok, %{"ok" => true}} = HTTP.deliver(:slack, %{"blocks" => []}, context)
+
+    opts = Process.get(:captured_http_client_opts)
+    ssl_opts = Keyword.fetch!(opts, :ssl)
+
+    assert Keyword.fetch!(ssl_opts, :verify) == :verify_none
+    assert Keyword.fetch!(ssl_opts, :depth) == 4
+  end
+
   test "preserves caller-provided TLS trust settings" do
     Process.delete(:captured_http_client_opts)
 
