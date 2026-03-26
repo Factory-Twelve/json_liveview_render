@@ -28,7 +28,7 @@ defmodule JsonLiveviewRender.Spec.Normalize do
   Normalizes external spec input into one deterministic canonical `root + elements` map.
   """
   @spec canonical(map() | String.t()) :: normalization_result()
-  def canonical(spec) when is_map(spec), do: {:ok, normalize_canonical(spec)}
+  def canonical(spec) when is_map(spec), do: normalize_canonical(spec)
 
   def canonical(spec) when is_binary(spec) do
     with {:ok, decoded} <- Jason.decode(spec) do
@@ -40,7 +40,7 @@ defmodule JsonLiveviewRender.Spec.Normalize do
 
   def canonical(_), do: {:error, [{:invalid_spec, "spec must be a map or JSON string"}]}
 
-  defp canonical_decoded(decoded) when is_map(decoded), do: {:ok, normalize_canonical(decoded)}
+  defp canonical_decoded(decoded) when is_map(decoded), do: normalize_canonical(decoded)
 
   defp canonical_decoded(_decoded),
     do: {:error, [{:invalid_spec, "spec must be a map or JSON string"}]}
@@ -59,10 +59,10 @@ defmodule JsonLiveviewRender.Spec.Normalize do
   end
 
   defp normalize_canonical(spec) do
-    %{
-      "root" => normalize_canonical_root(fetch_canonical_root(spec)),
-      "elements" => normalize_canonical_elements(fetch_canonical_elements(spec))
-    }
+    with {:ok, root} <- normalize_canonical_root(fetch_canonical_root(spec)),
+         {:ok, elements} <- normalize_canonical_elements(fetch_canonical_elements(spec)) do
+      {:ok, %{"root" => root, "elements" => elements}}
+    end
   end
 
   defp fetch_canonical_root(spec), do: fetch_present_key(spec, :root, "root")
@@ -80,9 +80,14 @@ defmodule JsonLiveviewRender.Spec.Normalize do
   defp normalize_legacy_root(root) when is_atom(root), do: Atom.to_string(root)
   defp normalize_legacy_root(root), do: root
 
-  defp normalize_canonical_root(nil), do: nil
-  defp normalize_canonical_root(root) when is_binary(root), do: root
-  defp normalize_canonical_root(root), do: Normalizer.safe_to_string(root)
+  defp normalize_canonical_root(nil), do: {:ok, nil}
+
+  defp normalize_canonical_root(root) do
+    case Normalizer.canonical_string(root, :root) do
+      {:ok, normalized_root} -> {:ok, normalized_root}
+      {:error, {:invalid_canonical_value, _, value}} -> invalid_canonical_value("root", value)
+    end
+  end
 
   defp normalize_legacy_elements(elements) when is_map(elements) do
     Map.new(elements, fn {id, element} ->
@@ -93,10 +98,37 @@ defmodule JsonLiveviewRender.Spec.Normalize do
   defp normalize_legacy_elements(elements), do: elements
 
   defp normalize_canonical_elements(elements) when is_map(elements) do
-    Map.new(elements, fn {id, element} ->
-      {Normalizer.safe_to_string(id), Normalizer.normalize_element(element)}
+    Enum.reduce_while(elements, {:ok, %{}}, fn {id, element}, {:ok, acc} ->
+      with {:ok, normalized_id} <- normalize_canonical_id(id),
+           {:ok, normalized_element} <- Normalizer.normalize_element_canonical(element) do
+        {:cont, {:ok, Map.put(acc, normalized_id, normalized_element)}}
+      else
+        {:error, {:invalid_canonical_value, :prop_key, value}} ->
+          {:halt, invalid_canonical_value("prop key", value)}
+
+        {:error, {:invalid_canonical_value, :child_id, value}} ->
+          {:halt, invalid_canonical_value("child id", value)}
+
+        {:error, {:invalid_canonical_value, :element_id, value}} ->
+          {:halt, invalid_canonical_value("element id", value)}
+      end
     end)
   end
 
-  defp normalize_canonical_elements(elements), do: elements
+  defp normalize_canonical_elements(elements), do: {:ok, elements}
+
+  defp normalize_canonical_id(id) do
+    case Normalizer.canonical_string(id, :element_id) do
+      {:ok, normalized_id} -> {:ok, normalized_id}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp invalid_canonical_value(label, value) do
+    {:error,
+     [
+       {:invalid_spec,
+        "canonical #{label}s must be strings, atoms, booleans, or numbers, got: #{inspect(value)}"}
+     ]}
+  end
 end

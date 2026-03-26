@@ -223,7 +223,8 @@ defmodule JsonLiveviewRender.Spec do
     allow_missing_root? = Keyword.get(opts, :allow_missing_root, false)
     allow_unresolved_children? = Keyword.get(opts, :allow_unresolved_children, false)
 
-    {duplicate_child_errors, multiple_parent_errors} = parentage_errors(root, elements)
+    {duplicate_child_errors, multiple_parent_errors} =
+      parentage_errors(root, elements, allow_unresolved_children?)
 
     unreachable_errors =
       if allow_missing_root? or allow_unresolved_children? do
@@ -235,7 +236,7 @@ defmodule JsonLiveviewRender.Spec do
     duplicate_child_errors ++ multiple_parent_errors ++ unreachable_errors
   end
 
-  defp parentage_errors(root, elements) do
+  defp parentage_errors(root, elements, allow_unresolved_children?) do
     {duplicate_child_errors, parent_map} =
       Enum.reduce(elements, {[], %{}}, fn {id, element}, {duplicate_errors, acc_parent_map} ->
         children = if is_map(element), do: Map.get(element, "children", []), else: []
@@ -262,7 +263,8 @@ defmodule JsonLiveviewRender.Spec do
                 end
 
               next_parent_map =
-                if is_binary(child) and child != root do
+                if is_binary(child) and child != root and
+                     (not allow_unresolved_children? or Map.has_key?(elements, child)) do
                   Map.update(inner_parent_map, child, MapSet.new([id]), &MapSet.put(&1, id))
                 else
                   inner_parent_map

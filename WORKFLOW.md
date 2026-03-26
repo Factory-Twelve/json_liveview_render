@@ -39,7 +39,7 @@ codex:
   command: >-
     codex
     --config shell_environment_policy.inherit=all
-    --config model_reasoning_effort=xhigh
+    --config model_reasoning_effort=high
     --model gpt-5.4
     app-server
   approval_policy: never

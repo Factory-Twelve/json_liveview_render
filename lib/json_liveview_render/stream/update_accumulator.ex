@@ -200,7 +200,15 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
         {:error, {:invalid_update_root, "root must be a string when present"}}
 
       {:present, root} ->
-        {:ok, Normalizer.safe_to_string(root)}
+        case Normalizer.canonical_string(root, :root) do
+          {:ok, normalized_root} ->
+            {:ok, normalized_root}
+
+          {:error, _} ->
+            {:error,
+             {:invalid_update_root,
+              "root must be a string, atom, boolean, or number when present"}}
+        end
     end
   end
 
@@ -210,10 +218,7 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
         {:ok, :absent}
 
       {:present, elements} when is_map(elements) ->
-        {:ok,
-         Map.new(elements, fn {id, element} ->
-           {Normalizer.safe_to_string(id), normalize_element_update(element)}
-         end)}
+        normalize_update_elements(elements)
 
       {:present, _elements} ->
         {:error, {:invalid_update_elements, "elements must be a map when present"}}
@@ -233,10 +238,41 @@ defmodule JsonLiveviewRender.Stream.UpdateAccumulator do
     end
   end
 
-  defp normalize_element_update(element) when is_map(element),
-    do: Normalizer.normalize_element(element)
+  defp normalize_update_elements(elements) do
+    Enum.reduce_while(elements, {:ok, %{}}, fn {id, element}, {:ok, acc} ->
+      with {:ok, normalized_id} <- normalize_update_element_id(id),
+           {:ok, normalized_element} <- normalize_element_update(element, normalized_id) do
+        {:cont, {:ok, Map.put(acc, normalized_id, normalized_element)}}
+      else
+        {:error, reason} -> {:halt, {:error, {:invalid_update_elements, reason}}}
+      end
+    end)
+  end
 
-  defp normalize_element_update(element), do: element
+  defp normalize_update_element_id(id) do
+    case Normalizer.canonical_string(id, :element_id) do
+      {:ok, normalized_id} ->
+        {:ok, normalized_id}
+
+      {:error, _} ->
+        {:error, "element ids must be strings, atoms, booleans, or numbers, got: #{inspect(id)}"}
+    end
+  end
+
+  defp normalize_element_update(element, _id) when not is_map(element), do: {:ok, element}
+
+  defp normalize_element_update(element, id) do
+    case Normalizer.normalize_element_canonical(element) do
+      {:ok, normalized_element} ->
+        {:ok, normalized_element}
+
+      {:error, {:invalid_canonical_value, :prop_key, value}} ->
+        {:error, "element #{inspect(id)} has invalid prop key #{inspect(value)}"}
+
+      {:error, {:invalid_canonical_value, :child_id, value}} ->
+        {:error, "element #{inspect(id)} has invalid child id #{inspect(value)}"}
+    end
+  end
 
   defp maybe_put_root(update, :absent), do: update
   defp maybe_put_root(update, root), do: Map.put(update, "root", root)

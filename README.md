@@ -298,6 +298,11 @@ spec = JsonLiveviewRender.Stream.to_spec(stream)
 {:ok, _validated_spec} = JsonLiveviewRender.Stream.finalize(stream, MyApp.UICatalog)
 ```
 
+While `allow_partial` is enabled, unresolved child ids are tolerated and any
+tree-shape checks that depend on those unresolved ids are deferred until the
+referenced elements materialize. Duplicate child ids within the same parent are
+still rejected immediately.
+
 The stream contract is:
 
 - `{:root, id}`: establish the stream root

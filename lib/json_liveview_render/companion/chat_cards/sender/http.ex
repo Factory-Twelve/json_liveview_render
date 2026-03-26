@@ -180,13 +180,9 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
     client = resolve_http_client(context)
     retry = normalize_retry_config(Map.get(config, :retry) || Map.get(context, :retry, %{}))
     sleep_fn = resolve_sleep_fn(context)
+    client_opts = request_client_opts(request, config, context)
 
-    timeout =
-      request.timeout ||
-        context
-        |> Map.get(:timeout, 5_000)
-
-    execute_with_retry(client, request, target, timeout, retry, sleep_fn, 1)
+    execute_with_retry(client, request, target, client_opts, retry, sleep_fn, 1)
   end
 
   defp normalize_platform_response(:slack, %{body: body}) do
@@ -313,11 +309,12 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
       private_ip_host?(host) ->
         {:error, {:private_destination, host}}
 
-      dns_resolves_private_ip?(host, policy) ->
-        {:error, {:private_destination, host}}
-
       true ->
-        :ok
+        case dns_resolution_result(host, policy) do
+          {:ok, true} -> {:error, {:private_destination, host}}
+          {:ok, false} -> :ok
+          {:error, reason} -> {:error, {:dns_resolution_failed, host, reason}}
+        end
     end
   end
 
@@ -410,18 +407,105 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
     end
   end
 
-  defp dns_resolves_private_ip?(_host, %{resolve_hostnames: false}), do: false
+  defp request_client_opts(request, config, context) do
+    timeout =
+      request.timeout ||
+        context
+        |> Map.get(:timeout, 5_000)
 
-  defp dns_resolves_private_ip?(host, %{dns_resolver: resolver}) do
+    ssl_opts =
+      case request.url do
+        "https://" <> _rest -> [ssl: default_ssl_options(config, context)]
+        _ -> []
+      end
+
+    [timeout: timeout] ++ ssl_opts
+  end
+
+  defp dns_resolution_result(_host, %{resolve_hostnames: false}), do: {:ok, false}
+
+  defp dns_resolution_result(host, %{dns_resolver: resolver}) do
     case :inet.parse_address(String.to_charlist(host)) do
       {:ok, _ip_literal} ->
-        false
+        {:ok, false}
 
       {:error, _} ->
         case safe_dns_resolve(resolver, host) do
-          {:ok, addresses} -> Enum.any?(addresses, &private_ip?/1)
-          {:error, _reason} -> false
+          {:ok, addresses} -> {:ok, Enum.any?(addresses, &private_ip?/1)}
+          {:error, reason} -> {:error, reason}
         end
+    end
+  end
+
+  defp default_ssl_options(config, context) do
+    ssl_config =
+      config
+      |> Map.get(:ssl, Map.get(context, :ssl, %{}))
+      |> normalize_ssl_config()
+
+    verify =
+      case Keyword.get(ssl_config, :verify) do
+        :verify_none -> :verify_none
+        _ -> :verify_peer
+      end
+
+    if verify == :verify_none do
+      Keyword.put(ssl_config, :verify, :verify_none)
+    else
+      ssl_config
+      |> Keyword.put(:verify, :verify_peer)
+      |> maybe_put_default_cacerts()
+      |> maybe_put_default_hostname_check()
+    end
+  end
+
+  defp normalize_ssl_config(%{} = ssl_config), do: Enum.into(ssl_config, [])
+
+  defp normalize_ssl_config(ssl_config) when is_list(ssl_config) do
+    if Keyword.keyword?(ssl_config), do: ssl_config, else: []
+  end
+
+  defp normalize_ssl_config(_ssl_config), do: []
+
+  defp maybe_put_default_cacerts(ssl_opts) do
+    if Enum.any?(ssl_opts, fn {key, _value} -> key in [:cacerts, :cacertfile] end) do
+      ssl_opts
+    else
+      Keyword.merge(ssl_opts, default_cacerts_option())
+    end
+  end
+
+  defp maybe_put_default_hostname_check(ssl_opts) do
+    if Keyword.has_key?(ssl_opts, :customize_hostname_check) do
+      ssl_opts
+    else
+      Keyword.merge(ssl_opts, default_hostname_check_option())
+    end
+  end
+
+  defp default_cacerts_option do
+    if Code.ensure_loaded?(:public_key) and function_exported?(:public_key, :cacerts_get, 0) do
+      try do
+        case :public_key.cacerts_get() do
+          certs when is_list(certs) and certs != [] -> [cacerts: certs]
+          _ -> []
+        end
+      rescue
+        _ -> []
+      catch
+        _kind, _reason -> []
+      end
+    else
+      []
+    end
+  end
+
+  defp default_hostname_check_option do
+    if Code.ensure_loaded?(:public_key) and
+         function_exported?(:public_key, :pkix_verify_hostname_match_fun, 1) do
+      [customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]]
+    else
+      []
     end
   end
 
@@ -507,8 +591,8 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
 
   defp decode_json(_), do: :error
 
-  defp execute_with_retry(client, request, target, timeout, retry, sleep_fn, attempt) do
-    case client.post(request.url, request.headers, request.body, timeout: timeout) do
+  defp execute_with_retry(client, request, target, client_opts, retry, sleep_fn, attempt) do
+    case client.post(request.url, request.headers, request.body, client_opts) do
       {:ok, %{status: status} = response} when status >= 200 and status < 300 ->
         {:ok, response}
 
@@ -523,7 +607,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
           retry_delay_ms(retry, attempt),
           sleep_fn,
           fn ->
-            execute_with_retry(client, request, target, timeout, retry, sleep_fn, attempt + 1)
+            execute_with_retry(client, request, target, client_opts, retry, sleep_fn, attempt + 1)
           end
         )
 
@@ -538,7 +622,7 @@ defmodule JsonLiveviewRender.Companion.ChatCards.Sender.HTTP do
           retry_delay_ms(retry, attempt),
           sleep_fn,
           fn ->
-            execute_with_retry(client, request, target, timeout, retry, sleep_fn, attempt + 1)
+            execute_with_retry(client, request, target, client_opts, retry, sleep_fn, attempt + 1)
           end
         )
     end

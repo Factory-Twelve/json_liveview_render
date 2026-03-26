@@ -251,6 +251,22 @@ defmodule JsonLiveviewRender.StreamTest do
            }
   end
 
+  test "update envelopes reject non-scalar canonical ids without mutating state" do
+    bad_update = %{
+      "sequence" => 1,
+      "root" => "page",
+      "elements" => %{
+        "page" => %{"type" => "row", "props" => %{}, "children" => [{:bad, :child}]}
+      }
+    }
+
+    assert {:error, {:invalid_update_elements, message}, stream} =
+             Stream.ingest_many(Stream.new(), [{:update, bad_update}], Catalog)
+
+    assert message =~ "invalid child id"
+    assert Stream.to_spec(stream) == %{"root" => nil, "elements" => %{}}
+  end
+
   test "ingest/3 rejects root reassignment and accepts idempotent same root" do
     {:ok, stream} = Stream.ingest(Stream.new(), {:root, "page"}, Catalog)
     assert {:ok, ^stream} = Stream.ingest(stream, {:root, "page"}, Catalog)

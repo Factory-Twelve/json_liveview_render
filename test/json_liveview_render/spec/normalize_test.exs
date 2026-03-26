@@ -126,6 +126,42 @@ defmodule JsonLiveviewRender.Spec.NormalizeTest do
     assert Enum.any?(reasons, fn {tag, _message} -> tag == :invalid_children_type end)
   end
 
+  test "canonical/1 rejects non-scalar element ids" do
+    spec = %{
+      root: :page,
+      elements: %{
+        {:bad, :id} => %{type: :row, props: %{}, children: []}
+      }
+    }
+
+    assert {:error, [{:invalid_spec, message}]} = Normalize.canonical(spec)
+    assert message =~ "canonical element ids"
+  end
+
+  test "canonical/1 rejects non-scalar prop keys" do
+    spec = %{
+      root: :page,
+      elements: %{
+        page: %{type: :row, props: %{{:bad, :key} => true}, children: []}
+      }
+    }
+
+    assert {:error, [{:invalid_spec, message}]} = Normalize.canonical(spec)
+    assert message =~ "canonical prop keys"
+  end
+
+  test "canonical/1 rejects non-scalar child ids inside child lists" do
+    spec = %{
+      root: :page,
+      elements: %{
+        page: %{type: :row, props: %{}, children: [{:bad, :child}]}
+      }
+    }
+
+    assert {:error, [{:invalid_spec, message}]} = Normalize.canonical(spec)
+    assert message =~ "canonical child ids"
+  end
+
   test "for_validation/1 canonicalizes mixed nested keys even when top-level keys are already strings" do
     spec = %{
       "root" => :metric_1,
