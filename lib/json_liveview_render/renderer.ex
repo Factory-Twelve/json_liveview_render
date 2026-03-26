@@ -227,37 +227,75 @@ defmodule JsonLiveviewRender.Renderer do
         nil
 
       %{"type" => type} = element ->
-        if error_boundary do
-          try do
-            do_render_element(
-              type,
-              element,
-              spec,
-              type_context,
-              bindings,
-              check_binding_types,
-              error_boundary
-            )
-          rescue
-            e ->
-              Logger.warning(
-                "[JsonLiveviewRender.Renderer] error boundary caught error rendering element #{inspect(id)}: #{Exception.message(e)}"
-              )
-
-              nil
-          end
-        else
-          do_render_element(
-            type,
-            element,
-            spec,
-            type_context,
-            bindings,
-            check_binding_types,
-            error_boundary
-          )
-        end
+        maybe_render_element(
+          id,
+          type,
+          element,
+          spec,
+          type_context,
+          bindings,
+          check_binding_types,
+          error_boundary
+        )
     end
+  end
+
+  defp maybe_render_element(
+         _id,
+         type,
+         element,
+         spec,
+         type_context,
+         bindings,
+         check_binding_types,
+         false
+       ) do
+    do_render_element(
+      type,
+      element,
+      spec,
+      type_context,
+      bindings,
+      check_binding_types,
+      false
+    )
+  end
+
+  defp maybe_render_element(
+         id,
+         type,
+         element,
+         spec,
+         type_context,
+         bindings,
+         check_binding_types,
+         true
+       ) do
+    try do
+      do_render_element(
+        type,
+        element,
+        spec,
+        type_context,
+        bindings,
+        check_binding_types,
+        true
+      )
+    rescue
+      exception ->
+        log_error_boundary(id, "error", Exception.message(exception))
+        nil
+    catch
+      kind, reason ->
+        log_error_boundary(id, Atom.to_string(kind), inspect(reason))
+        nil
+    end
+  end
+
+  defp log_error_boundary(id, kind, reason) do
+    Logger.warning(
+      "[JsonLiveviewRender.Renderer] error boundary caught error rendering element #{inspect(id)} via #{kind}: #{reason}"
+    )
   end
 
   defp do_render_element(

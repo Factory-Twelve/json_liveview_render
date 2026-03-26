@@ -127,6 +127,98 @@ defmodule JsonLiveviewRender.RendererErrorBoundaryTest do
       assert log =~ "boom from metric callback"
     end
 
+    test "catches callback exit" do
+      defmodule ExitingRegistry do
+        use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.Catalog
+
+        alias JsonLiveviewRenderTest.Fixtures.Components
+
+        render(:row, &Components.row/1)
+        render(:column, &Components.column/1)
+        render(:section, &Components.section/1)
+        render(:grid, &Components.grid/1)
+
+        render(:metric, fn _assigns ->
+          exit(:metric_exit)
+        end)
+      end
+
+      spec = %{
+        "root" => "metric_1",
+        "elements" => %{
+          "metric_1" => %{
+            "type" => "metric",
+            "props" => %{"label" => "Rev", "value" => "$1"},
+            "children" => []
+          }
+        }
+      }
+
+      log =
+        capture_log(fn ->
+          html =
+            JsonLiveviewRender.Test.render_spec(spec, Catalog,
+              registry: ExitingRegistry,
+              current_user: %{role: :member},
+              authorizer: Authorizer,
+              bindings: %{},
+              error_boundary: true
+            )
+
+          refute html =~ "Rev"
+        end)
+
+      assert log =~ "error boundary caught error"
+      assert log =~ "via exit"
+      assert log =~ ":metric_exit"
+    end
+
+    test "catches callback throw" do
+      defmodule ThrowingRegistry do
+        use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.Catalog
+
+        alias JsonLiveviewRenderTest.Fixtures.Components
+
+        render(:row, &Components.row/1)
+        render(:column, &Components.column/1)
+        render(:section, &Components.section/1)
+        render(:grid, &Components.grid/1)
+
+        render(:metric, fn _assigns ->
+          throw(:metric_throw)
+        end)
+      end
+
+      spec = %{
+        "root" => "metric_1",
+        "elements" => %{
+          "metric_1" => %{
+            "type" => "metric",
+            "props" => %{"label" => "Rev", "value" => "$1"},
+            "children" => []
+          }
+        }
+      }
+
+      log =
+        capture_log(fn ->
+          html =
+            JsonLiveviewRender.Test.render_spec(spec, Catalog,
+              registry: ThrowingRegistry,
+              current_user: %{role: :member},
+              authorizer: Authorizer,
+              bindings: %{},
+              error_boundary: true
+            )
+
+          refute html =~ "Rev"
+        end)
+
+      assert log =~ "error boundary caught error"
+      assert log =~ "via throw"
+      assert log =~ ":metric_throw"
+    end
+
     test "siblings survive when one element errors" do
       defmodule SiblingRegistry do
         use JsonLiveviewRender.Registry, catalog: JsonLiveviewRenderTest.Fixtures.Catalog
