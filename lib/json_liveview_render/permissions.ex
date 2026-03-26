@@ -29,38 +29,57 @@ defmodule JsonLiveviewRender.Permissions do
     user_role_keys = inherited_role_keys(current_user)
     allowed_ids = allowed_ids(elements, catalog, current_user, authorizer, user_role_keys)
 
-    if root_denied?(root, elements, allowed_ids) do
-      spec
-      |> Map.put("root", nil)
-      |> Map.put("elements", %{})
-    else
-      blocked_ids =
-        blocked_reachable_ids(
-          root,
-          elements,
-          allowed_ids
-        )
+    cond do
+      map_size(elements) == MapSet.size(allowed_ids) and children_fully_materialized?(elements) ->
+        spec
 
-      retained_ids = MapSet.difference(allowed_ids, blocked_ids)
+      root_denied?(root, elements, allowed_ids) ->
+        spec
+        |> Map.put("root", nil)
+        |> Map.put("elements", %{})
 
-      filtered_elements =
-        elements
-        |> Enum.filter(fn {id, _} -> MapSet.member?(retained_ids, id) end)
-        |> Enum.into(%{}, fn {id, element} ->
-          children =
-            Map.get(element, "children", [])
-            |> Enum.filter(&MapSet.member?(retained_ids, &1))
+      true ->
+        blocked_ids =
+          blocked_reachable_ids(
+            root,
+            elements,
+            allowed_ids
+          )
 
-          {id, Map.put(element, "children", children)}
-        end)
+        retained_ids = MapSet.difference(allowed_ids, blocked_ids)
 
-      spec
-      |> Map.put("root", root)
-      |> Map.put("elements", filtered_elements)
+        filtered_elements =
+          Enum.reduce(elements, %{}, fn {id, element}, acc ->
+            if MapSet.member?(retained_ids, id) do
+              children =
+                Map.get(element, "children", [])
+                |> Enum.filter(&MapSet.member?(retained_ids, &1))
+
+              Map.put(acc, id, Map.put(element, "children", children))
+            else
+              acc
+            end
+          end)
+
+        spec
+        |> Map.put("root", root)
+        |> Map.put("elements", filtered_elements)
     end
   end
 
   def filter(spec, _current_user, _catalog, _authorizer), do: spec
+
+  defp children_fully_materialized?(elements) do
+    Enum.all?(elements, fn
+      {_id, %{} = element} ->
+        element
+        |> Map.get("children", [])
+        |> Enum.all?(&Map.has_key?(elements, &1))
+
+      {_id, _element} ->
+        false
+    end)
+  end
 
   defp root_denied?(
          nil,

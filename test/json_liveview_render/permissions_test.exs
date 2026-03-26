@@ -198,6 +198,28 @@ defmodule JsonLiveviewRender.PermissionsTest do
     assert Map.has_key?(filtered["elements"], "metric_1")
   end
 
+  test "drops unresolved child refs even when all materialized elements are allowed" do
+    spec = %{
+      "root" => "page",
+      "elements" => %{
+        "page" => %{
+          "type" => "row",
+          "props" => %{},
+          "children" => ["metric_1", "missing_1"]
+        },
+        "metric_1" => %{
+          "type" => "metric",
+          "props" => %{"label" => "A", "value" => "1"},
+          "children" => []
+        }
+      }
+    }
+
+    filtered = Permissions.filter(spec, %{role: :member}, Catalog, Authorizer)
+
+    assert get_in(filtered, ["elements", "page", "children"]) == ["metric_1"]
+  end
+
   test "reuses permission checks for repeated component types" do
     {:ok, counter} = Agent.start_link(fn -> 0 end)
 

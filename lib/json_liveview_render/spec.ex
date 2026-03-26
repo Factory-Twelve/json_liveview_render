@@ -344,56 +344,49 @@ defmodule JsonLiveviewRender.Spec do
   defp validate_element_props(id, %{"type" => type, "props" => props}, catalog, strict?)
        when is_map(props) do
     component = catalog.component(type)
-    known_props = ComponentDef.prop_key_set(component)
 
-    unknown_errors =
-      props
-      |> Map.keys()
-      |> Enum.filter(&(not MapSet.member?(known_props, &1)))
-      |> Enum.map(fn prop ->
-        if strict? do
-          Errors.unknown_prop(id, prop)
-        else
-          Logger.warning(
-            "[JsonLiveviewRender.Spec] ignoring unknown prop #{inspect(prop)} for element #{inspect(id)}"
-          )
-
-          nil
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
-
-    required_errors =
-      component.props
-      |> Enum.flat_map(fn {prop_name, %PropDef{required: required?, default: default}} ->
+    {prop_defs_by_key, required_errors_rev} =
+      Enum.reduce(component.props, {%{}, []}, fn {prop_name, %PropDef{} = prop_def},
+                                                 {defs, required_errors} ->
         key = Atom.to_string(prop_name)
 
-        if required? and is_nil(default) and not Map.has_key?(props, key) do
-          [Errors.missing_required_prop(id, key)]
-        else
-          []
-        end
-      end)
-
-    type_errors =
-      component.props
-      |> Enum.flat_map(fn {prop_name, prop_def} ->
-        key = Atom.to_string(prop_name)
-
-        if Map.has_key?(props, key) do
-          value = Map.get(props, key)
-
-          if PropDef.valid?(value, prop_def) do
-            []
+        next_required_errors =
+          if prop_def.required and is_nil(prop_def.default) and not Map.has_key?(props, key) do
+            [Errors.missing_required_prop(id, key) | required_errors]
           else
-            [Errors.invalid_prop_type(id, key, prop_def.type, value)]
+            required_errors
           end
-        else
-          []
+
+        {Map.put(defs, key, prop_def), next_required_errors}
+      end)
+
+    {unknown_errors_rev, type_errors_rev} =
+      Enum.reduce(props, {[], []}, fn {key, value}, {unknown_errors, type_errors} ->
+        case Map.fetch(prop_defs_by_key, key) do
+          {:ok, prop_def} ->
+            if PropDef.valid?(value, prop_def) do
+              {unknown_errors, type_errors}
+            else
+              {unknown_errors,
+               [Errors.invalid_prop_type(id, key, prop_def.type, value) | type_errors]}
+            end
+
+          :error ->
+            if strict? do
+              {[Errors.unknown_prop(id, key) | unknown_errors], type_errors}
+            else
+              Logger.warning(
+                "[JsonLiveviewRender.Spec] ignoring unknown prop #{inspect(key)} for element #{inspect(id)}"
+              )
+
+              {unknown_errors, type_errors}
+            end
         end
       end)
 
-    errors = unknown_errors ++ required_errors ++ type_errors
+    errors =
+      Enum.reverse(unknown_errors_rev) ++
+        Enum.reverse(required_errors_rev) ++ Enum.reverse(type_errors_rev)
 
     case errors do
       [] -> :ok
