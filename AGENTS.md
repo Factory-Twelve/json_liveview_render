@@ -14,6 +14,7 @@ Default workflow:
 - Keep Mix task entrypoints under `lib/mix/tasks/`.
 - Preserve the Catalog -> Spec -> Render layering.
 - For unattended Linear/Symphony runs, follow `WORKFLOW.md` status routing and repo-local `.codex/skills/`.
+- Use repo-local `.codex/skills/pull`, `commit`, `push`, `request-review`, and `land` for branch sync, review, and auto-landing; use `debug`/`linear` for Symphony run diagnostics or raw Linear GraphQL.
 - Keep transport-specific work in documented companion/deferred surfaces; do not promote it into the core render contract.
 - Update architecture docs when changing public module boundaries or the release-family contract.
 
