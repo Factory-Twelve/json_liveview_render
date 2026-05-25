@@ -7,6 +7,8 @@ Start here:
 - `ARCHITECTURE.md`
 - `docs/quality.md`
 - `docs/architecture/`
+- `scripts/ci_plan.md` for the canonical CI matrix and command plan
+- `docs/perf.md` for benchmark run, capture, and comparison workflows
 - `WORKFLOW.md` for unattended Linear/Symphony orchestration
 
 Default workflow:
@@ -15,6 +17,7 @@ Default workflow:
 - Preserve the Catalog -> Spec -> Render layering.
 - For unattended Linear/Symphony runs, follow `WORKFLOW.md` status routing and repo-local `.codex/skills/`.
 - Use repo-local `.codex/skills/pull`, `commit`, `push`, `request-review`, and `land` for branch sync, review, and auto-landing; use `debug`/`linear` for Symphony run diagnostics or raw Linear GraphQL.
+- For benchmark baselines or regressions, follow `docs/perf.md` and keep raw JSON captures out of committed source paths unless a ticket explicitly requires fixtures.
 - Keep transport-specific work in documented companion/deferred surfaces; do not promote it into the core render contract.
 - Update architecture docs when changing public module boundaries or the release-family contract.
 
