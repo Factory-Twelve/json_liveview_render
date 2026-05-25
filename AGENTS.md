@@ -18,14 +18,17 @@ Default workflow:
 - For unattended Linear/Symphony runs, follow `WORKFLOW.md` status routing and repo-local `.codex/skills/`.
 - Use repo-local `.codex/skills/pull`, `commit`, `push`, `request-review`, and `land` for branch sync, review, and auto-landing; use `debug`/`linear` for Symphony run diagnostics or raw Linear GraphQL.
 - For benchmark baselines or regressions, follow `docs/perf.md` and keep raw JSON captures out of committed source paths unless a ticket explicitly requires fixtures.
+- For release intent, follow the README release policy: prepare changelog entries, run `make release-check`, and do not run `mix hex.publish` or push tags without explicit maintainer approval.
 - Keep transport-specific work in documented companion/deferred surfaces; do not promote it into the core render contract.
 - Update architecture docs when changing public module boundaries or the release-family contract.
 
 Common commands:
 - `mix test` for the required focused validation gate.
+- `MIX_PUBSUB=0 mix test` for the CI-plan test command.
 - `mix ci` for format, warnings-as-errors compile, and tests.
 - `make ci-local` for the local CI plan's Elixir 1.15 slot; `make ci-local-full` for the documented 1.15 and 1.19 matrix.
 - `make release-check` before release/publish work.
+- `make help` to discover available release/CI helpers.
 - `make benchmark` for local benchmark text output; `make benchmark-ci` for CI-style JSON benchmark output.
 
 Do not turn the core library into an app-specific component bundle or a transport adapter kitchen sink.
