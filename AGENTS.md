@@ -9,12 +9,14 @@ Start here:
 - `docs/architecture/`
 - `scripts/ci_plan.md` for the canonical CI matrix and command plan
 - `docs/perf.md` for benchmark run, capture, and comparison workflows
+- `RELEASE_READINESS.md` for the v0.3 release gate checklist and smoke matrix
 - `WORKFLOW.md` for unattended Linear/Symphony orchestration
 
 Default workflow:
 - Keep core library behavior under `lib/json_liveview_render/`.
 - Keep Mix task entrypoints under `lib/mix/tasks/`.
 - Preserve the Catalog -> Spec -> Render layering.
+- Use repo-local `.codex/skills/repo-context` before non-trivial changes.
 - For unattended Linear/Symphony runs, follow `WORKFLOW.md` status routing and repo-local `.codex/skills/`.
 - Use repo-local `.codex/skills/pull`, `commit`, `push`, `request-review`, and `land` for branch sync, review, and auto-landing; use `debug`/`linear` for Symphony run diagnostics or raw Linear GraphQL.
 - For benchmark baselines or regressions, follow `docs/perf.md` and keep raw JSON captures out of committed source paths unless a ticket explicitly requires fixtures.
@@ -27,8 +29,10 @@ Common commands:
 - `MIX_PUBSUB=0 mix test` for the CI-plan test command.
 - `mix ci` for format, warnings-as-errors compile, and tests.
 - `make ci-local` for the local CI plan's Elixir 1.15 slot; `make ci-local-full` for the documented 1.15 and 1.19 matrix.
+- `./scripts/ci_local.sh --dry-run --matrix 1.15,1.19` to preview the local CI plan.
 - `make release-check` before release/publish work.
 - `make help` to discover available release/CI helpers.
 - `make benchmark` for local benchmark text output; `make benchmark-ci` for CI-style JSON benchmark output.
+- `mix json_liveview_render.bench --matrix --suites validate,render --seed 20260301 --iterations 30 --format json --guardrail-fail` to make benchmark threshold regressions blocking.
 
 Do not turn the core library into an app-specific component bundle or a transport adapter kitchen sink.
