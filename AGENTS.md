@@ -9,6 +9,7 @@ Start here:
 - `docs/architecture/`
 - `scripts/ci_plan.md` for the canonical CI matrix and command plan
 - `docs/perf.md` for benchmark run, capture, and comparison workflows
+- `docs/companion/` for internal experimental companion-surface contracts
 - `RELEASE_READINESS.md` for the v0.3 release gate checklist and smoke matrix
 - `WORKFLOW.md` for unattended Linear/Symphony orchestration
 
@@ -21,6 +22,7 @@ Default workflow:
 - Use repo-local `.codex/skills/pull`, `commit`, `push`, `request-review`, and `land` for branch sync, review, and auto-landing; use `debug`/`linear` for Symphony run diagnostics or raw Linear GraphQL.
 - For benchmark baselines or regressions, follow `docs/perf.md` and keep raw JSON captures out of committed source paths unless a ticket explicitly requires fixtures.
 - For release intent, follow the README release policy: prepare changelog entries, run `make release-check`, and do not run `mix hex.publish` or push tags without explicit maintainer approval.
+- Treat `JsonLiveviewRender.Companion.*` and `JsonLiveviewRender.Blocks.*` as internal experimental companion surfaces; keep workflow wiring, delivery policy, and app-specific grids outside core library behavior.
 - Keep transport-specific work in documented companion/deferred surfaces; do not promote it into the core render contract.
 - Update architecture docs when changing public module boundaries or the release-family contract.
 
@@ -34,5 +36,6 @@ Common commands:
 - `make help` to discover available release/CI helpers.
 - `make benchmark` for local benchmark text output; `make benchmark-ci` for CI-style JSON benchmark output.
 - `mix json_liveview_render.bench --matrix --suites validate,render --seed 20260301 --iterations 30 --format json --guardrail-fail` to make benchmark threshold regressions blocking.
+- `MIX_ENV=test mix run scripts/chat_cards_demo.exs` to smoke the companion chat-card target outputs without delivery credentials.
 
 Do not turn the core library into an app-specific component bundle or a transport adapter kitchen sink.
