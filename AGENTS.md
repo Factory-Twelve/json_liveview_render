@@ -16,6 +16,7 @@ Start here:
 Default workflow:
 - Keep core library behavior under `lib/json_liveview_render/`.
 - Keep Mix task entrypoints under `lib/mix/tasks/`.
+- In a fresh checkout, run `mix compile` before relying on `mix help json_liveview_render.*` to discover repo-local Mix tasks.
 - Preserve the Catalog -> Spec -> Render layering.
 - Use repo-local `.codex/skills/repo-context` before non-trivial changes.
 - For unattended Linear/Symphony runs, follow `WORKFLOW.md` status routing and repo-local `.codex/skills/`.
